@@ -9,6 +9,7 @@ require_relative "evidence"
 require_relative "redactor"
 require_relative "restic"
 require_relative "scheduler"
+require_relative "version"
 
 module KamalBackup
   class CLI
@@ -21,6 +22,7 @@ module KamalBackup
         kamal-backup check
         kamal-backup evidence
         kamal-backup schedule
+        kamal-backup version
 
       Environment is used for configuration. See README.md for Kamal accessory examples.
     TEXT
@@ -44,6 +46,7 @@ module KamalBackup
       argv = argv.dup
       command = argv.shift
       return puts(HELP) if command.nil? || %w[-h --help help].include?(command)
+      return puts(VERSION) if %w[-v --version version].include?(command)
 
       case command
       when "backup"

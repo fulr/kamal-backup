@@ -77,6 +77,14 @@ class CLITest < Minitest::Test
     assert_includes err, "postgres://[REDACTED]@db/app"
   end
 
+  def test_version_command_prints_version
+    cli = KamalBackup::CLI.new(env: base_env)
+
+    out, _ = capture_io { cli.run(["--version"]) }
+
+    assert_equal "#{KamalBackup::VERSION}\n", out
+  end
+
   def test_backup_can_skip_forget_for_append_only_repositories
     Dir.mktmpdir do |dir|
       db = File.join(dir, "app.sqlite3")

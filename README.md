@@ -84,6 +84,7 @@ kamal-backup list
 kamal-backup check
 kamal-backup evidence
 kamal-backup schedule
+kamal-backup version
 ```
 
 | Command | What it does |
@@ -95,6 +96,7 @@ kamal-backup schedule
 | `check` | Runs `restic check` and records the latest result for evidence output. |
 | `evidence` | Prints redacted JSON with backup configuration, latest snapshots, check status, and tool versions. |
 | `schedule` | Runs the foreground scheduler loop used by the container default command. |
+| `version` | Prints the gem version. `--version` and `-v` do the same. |
 
 The default container command is:
 
@@ -266,7 +268,7 @@ bundle install
 bundle exec jekyll serve --livereload
 ```
 
-Published docs are configured for `https://crmne.github.io/kamal-backup/`.
+Published docs are configured for `https://kamal-backup.dev`.
 
 Build the image:
 
@@ -274,9 +276,9 @@ Build the image:
 docker build -t kamal-backup .
 ```
 
-CI publishes container images to `ghcr.io/crmne/kamal-backup`. Pull requests build the image without pushing; branch, tag, SHA, and default-branch `latest` tags are pushed on non-PR builds.
+CI publishes container images to `ghcr.io/crmne/kamal-backup`. Pull requests build the image without pushing; branch, tag, SHA, default-branch `latest`, and default-branch version tags are pushed on non-PR builds. The version tag comes from `lib/kamal_backup/version.rb`, matching the gem version.
 
-The CLI is packaged as the `kamal-backup` gem. The Docker image builds and installs that gem, which is why `kamal-backup` is on `PATH` inside the container.
+The CLI is packaged as the `kamal-backup` gem. The Docker image builds and installs that gem, which is why `kamal-backup` is on `PATH` inside the container. On default-branch CI, a new gem version is published to RubyGems and GitHub Packages when it does not already exist. The RubyGems publish step expects the repository secret `RUBYGEMS_AUTH_TOKEN`.
 
 For local Ruby use:
 

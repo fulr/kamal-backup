@@ -28,6 +28,7 @@ kamal-backup list
 kamal-backup check
 kamal-backup evidence
 kamal-backup schedule
+kamal-backup version
 ```
 
 ## Commands
@@ -41,6 +42,7 @@ kamal-backup schedule
 | `check` | Run `restic check` and store the latest result under `KAMAL_BACKUP_STATE_DIR`. |
 | `evidence` | Print redacted operational evidence as JSON, including latest snapshots, check status, retention, and tool versions. |
 | `schedule` | Run the foreground scheduler loop used by the Docker image default command. |
+| `version` | Print the gem version. `--version` and `-v` do the same. |
 
 ## Local Ruby install
 

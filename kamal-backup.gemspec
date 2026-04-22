@@ -3,16 +3,21 @@ require_relative "lib/kamal_backup/version"
 Gem::Specification.new do |spec|
   spec.name = "kamal-backup"
   spec.version = KamalBackup::VERSION
-  spec.authors = ["kamal-backup contributors"]
+  spec.authors = ["Carmine Paolino"]
+  spec.email = ["carmine@paolino.me"]
 
   spec.summary = "Kamal-first restic backups for databases and mounted application files."
   spec.description = "A small CLI and Docker image for encrypted, verifiable Kamal accessory backups using restic."
-  spec.homepage = "https://github.com/crmne/kamal-backup"
+  spec.homepage = "https://kamal-backup.dev"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1"
 
   spec.metadata = {
-    "source_code_uri" => spec.homepage,
+    "homepage_uri" => spec.homepage,
+    "source_code_uri" => "https://github.com/crmne/kamal-backup",
+    "changelog_uri" => "https://github.com/crmne/kamal-backup/releases",
+    "bug_tracker_uri" => "https://github.com/crmne/kamal-backup/issues",
+    "funding_uri" => "https://github.com/sponsors/crmne",
     "rubygems_mfa_required" => "true"
   }
 
