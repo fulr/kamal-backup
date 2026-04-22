@@ -69,8 +69,20 @@ Run manual commands:
 ```sh
 bin/kamal backup
 bin/kamal backup-list
+bin/kamal backup-check
 bin/kamal backup-evidence
+bin/kamal backup-logs
 ```
+
+Alias reference:
+
+| Alias | Expands to | Use |
+|---|---|---|
+| `bin/kamal backup` | `accessory exec backup "kamal-backup backup"` | Run one backup immediately. |
+| `bin/kamal backup-list` | `accessory exec backup "kamal-backup list"` | Show restic snapshots for the configured app. |
+| `bin/kamal backup-check` | `accessory exec backup "kamal-backup check"` | Run `restic check` and store the latest check result. |
+| `bin/kamal backup-evidence` | `accessory exec backup "kamal-backup evidence"` | Print redacted backup evidence JSON. |
+| `bin/kamal backup-logs` | `accessory logs backup -f` | Tail the backup accessory logs. |
 
 ## Commands
 

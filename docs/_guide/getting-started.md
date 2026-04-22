@@ -52,8 +52,20 @@ The production interface is the accessory container. The image installs the `kam
 ```sh
 bin/kamal backup
 bin/kamal backup-list
+bin/kamal backup-check
 bin/kamal backup-evidence
+bin/kamal backup-logs
 ```
+
+Recommended aliases:
+
+| Alias | Expands to | Use |
+|---|---|---|
+| `bin/kamal backup` | `accessory exec backup "kamal-backup backup"` | Run one backup immediately. |
+| `bin/kamal backup-list` | `accessory exec backup "kamal-backup list"` | Show restic snapshots for the configured app. |
+| `bin/kamal backup-check` | `accessory exec backup "kamal-backup check"` | Run `restic check` and store the latest check result. |
+| `bin/kamal backup-evidence` | `accessory exec backup "kamal-backup evidence"` | Print redacted backup evidence JSON. |
+| `bin/kamal backup-logs` | `accessory logs backup -f` | Tail the backup accessory logs. |
 
 You do not need to install the gem on the app host. Installing the gem locally is optional and mainly useful for laptop-side restore drills where the operator machine has restic, database clients, and the required secrets.
 
