@@ -101,14 +101,16 @@ jobs:
           echo "Local version: $VERSION"
 
           GEM_NAME="kamal-backup"
-          ALL_PUBLISHED_VERSIONS=$(( \
-            gem list ^${GEM_NAME}$ -r --all 2>/dev/null || true; \
-            gem list ^${GEM_NAME}$ -r --prerelease 2>/dev/null || true; \
-          ) | sed -n 's/.*(\(.*\)).*/\1/p' \
+          ALL_PUBLISHED_VERSIONS=$(
+            {
+              gem list "^${GEM_NAME}$" -r --all 2>/dev/null || true
+              gem list "^${GEM_NAME}$" -r --prerelease 2>/dev/null || true
+            } | sed -n 's/.*(\(.*\)).*/\1/p' \
             | tr ',' '\n' \
             | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
             | grep . \
-            | sort -u )
+            | sort -u || true
+          )
 
           if echo "$ALL_PUBLISHED_VERSIONS" | grep -Fxq "$VERSION"; then
             echo "Verdict: Version $VERSION already published."
