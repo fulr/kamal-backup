@@ -1,3 +1,10 @@
+aliases:
+  backup: accessory exec backup "kamal-backup backup"
+  backup-list: accessory exec backup "kamal-backup list"
+  backup-check: accessory exec backup "kamal-backup check"
+  backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-logs: accessory logs backup -f
+
 accessories:
   backup:
     image: ghcr.io/crmne/kamal-backup:latest

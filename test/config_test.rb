@@ -63,4 +63,16 @@ class ConfigTest < Minitest::Test
     assert_includes config.retention_args, "3"
     refute_includes config.retention_args, "--keep-daily"
   end
+
+  def test_forget_after_backup_defaults_to_true
+    config = KamalBackup::Config.new(env: base_env)
+
+    assert config.forget_after_backup?
+  end
+
+  def test_forget_after_backup_can_be_disabled
+    config = KamalBackup::Config.new(env: base_env("RESTIC_FORGET_AFTER_BACKUP" => "false"))
+
+    refute config.forget_after_backup?
+  end
 end

@@ -2,6 +2,8 @@
 
 `kamal-backup` is a small Docker image for Kamal accessories. It creates encrypted, restic-backed backups for self-hosted apps by backing up database dumps and mounted application files together.
 
+The Docker image is the normal production interface. The Ruby gem packages the same `kamal-backup` executable so the image can install it cleanly, and so operators can optionally run the CLI from a laptop for restore drills when they have restic, database clients, and the right environment configured.
+
 It is aimed at common Kamal backup needs:
 
 - Kamal Postgres backup
@@ -26,6 +28,13 @@ Database dump snapshots are tagged with `kamal-backup`, `app:<name>`, `type:data
 Add a backup accessory to your Kamal deploy config:
 
 ```yaml
+aliases:
+  backup: accessory exec backup "kamal-backup backup"
+  backup-list: accessory exec backup "kamal-backup list"
+  backup-check: accessory exec backup "kamal-backup check"
+  backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-logs: accessory logs backup -f
+
 accessories:
   backup:
     image: ghcr.io/crmne/kamal-backup:latest
@@ -58,12 +67,14 @@ bin/kamal accessory logs backup
 Run manual commands:
 
 ```sh
-bin/kamal accessory exec backup "kamal-backup backup"
-bin/kamal accessory exec backup "kamal-backup list"
-bin/kamal accessory exec backup "kamal-backup evidence"
+bin/kamal backup
+bin/kamal backup-list
+bin/kamal backup-evidence
 ```
 
 ## Commands
+
+Commands usually run inside the production backup accessory with `bin/kamal accessory exec backup "kamal-backup <command>"`, or through Kamal aliases such as `bin/kamal backup`. A local gem install is useful when you intentionally want the operator laptop to run restic and database client commands directly.
 
 ```sh
 kamal-backup backup
@@ -74,6 +85,16 @@ kamal-backup check
 kamal-backup evidence
 kamal-backup schedule
 ```
+
+| Command | What it does |
+|---|---|
+| `backup` | Runs one immediate backup, creating one database snapshot and one file snapshot for all `BACKUP_PATHS`. |
+| `restore-db [snapshot-or-latest]` | Restores a database dump. Defaults to `latest` and requires explicit restore environment. |
+| `restore-files [snapshot-or-latest] [target-dir]` | Restores file paths from a file snapshot. Defaults to `latest /restore/files`. |
+| `list` | Lists restic snapshots for the configured app tags. |
+| `check` | Runs `restic check` and records the latest result for evidence output. |
+| `evidence` | Prints redacted JSON with backup configuration, latest snapshots, check status, and tool versions. |
+| `schedule` | Runs the foreground scheduler loop used by the container default command. |
 
 The default container command is:
 
@@ -126,7 +147,10 @@ RESTIC_KEEP_DAILY=7
 RESTIC_KEEP_WEEKLY=4
 RESTIC_KEEP_MONTHLY=6
 RESTIC_KEEP_YEARLY=2
+RESTIC_FORGET_AFTER_BACKUP=true
 ```
+
+Set `RESTIC_FORGET_AFTER_BACKUP=false` for append-only repositories, such as a restic REST server started with `--append-only`. In that mode, run retention and prune from the backup server or another trusted maintenance process with delete permissions.
 
 Scheduler and checks:
 
@@ -211,6 +235,7 @@ KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true
 - database adapter
 - redacted restic repository
 - configured file backup paths
+- whether client-side forget/prune is enabled
 - retention policy
 - latest database and file snapshots
 - last tracked `restic check` result

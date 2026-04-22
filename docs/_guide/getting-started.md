@@ -9,6 +9,13 @@ nav_order: 1
 Add a backup accessory to your Kamal deploy config:
 
 ```yaml
+aliases:
+  backup: accessory exec backup "kamal-backup backup"
+  backup-list: accessory exec backup "kamal-backup list"
+  backup-check: accessory exec backup "kamal-backup check"
+  backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-logs: accessory logs backup -f
+
 accessories:
   backup:
     image: ghcr.io/crmne/kamal-backup:latest
@@ -40,13 +47,15 @@ bin/kamal accessory logs backup
 
 ## Run manually
 
-The image installs the `kamal-backup` gem, so the executable is available inside the accessory container:
+The production interface is the accessory container. The image installs the `kamal-backup` executable, so you can run one-off commands through Kamal:
 
 ```sh
-bin/kamal accessory exec backup "kamal-backup backup"
-bin/kamal accessory exec backup "kamal-backup list"
-bin/kamal accessory exec backup "kamal-backup evidence"
+bin/kamal backup
+bin/kamal backup-list
+bin/kamal backup-evidence
 ```
+
+You do not need to install the gem on the app host. Installing the gem locally is optional and mainly useful for laptop-side restore drills where the operator machine has restic, database clients, and the required secrets.
 
 ## What gets backed up
 

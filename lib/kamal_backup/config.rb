@@ -46,6 +46,10 @@ module KamalBackup
       truthy?("RESTIC_CHECK_AFTER_BACKUP")
     end
 
+    def forget_after_backup?
+      !falsey?("RESTIC_FORGET_AFTER_BACKUP")
+    end
+
     def check_read_data_subset
       value("RESTIC_CHECK_READ_DATA_SUBSET")
     end
@@ -235,6 +239,10 @@ module KamalBackup
 
     def truthy?(key)
       %w[1 true yes y on].include?(value(key).to_s.downcase)
+    end
+
+    def falsey?(key)
+      %w[0 false no n off].include?(value(key).to_s.downcase)
     end
 
     private

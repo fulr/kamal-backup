@@ -18,6 +18,7 @@ module KamalBackup
         database_adapter: @config.database_adapter,
         restic_repository: @redactor.redact_string(@config.restic_repository.to_s),
         backup_paths: @config.backup_paths,
+        forget_after_backup: @config.forget_after_backup?,
         retention: @config.retention,
         latest_database_backup: latest_snapshot_summary(["type:database"]),
         latest_file_backup: latest_snapshot_summary(["type:files"]),

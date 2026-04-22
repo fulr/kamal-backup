@@ -65,9 +65,12 @@ RESTIC_KEEP_DAILY=7
 RESTIC_KEEP_WEEKLY=4
 RESTIC_KEEP_MONTHLY=6
 RESTIC_KEEP_YEARLY=2
+RESTIC_FORGET_AFTER_BACKUP=true
 ```
 
 After a successful backup, `kamal-backup` runs `restic forget --prune` with the configured retention policy.
+
+Set `RESTIC_FORGET_AFTER_BACKUP=false` for append-only repositories, such as a restic REST server started with `--append-only`. Retention and prune should then run from the backup server or another trusted maintenance process with delete permissions.
 
 ## Scheduler
 

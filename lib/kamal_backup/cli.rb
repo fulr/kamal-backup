@@ -71,7 +71,7 @@ module KamalBackup
       restic.ensure_repository!
       database.backup(restic, timestamp)
       restic.backup_paths(@config.backup_paths, tags: ["type:files", "run:#{timestamp}"])
-      restic.forget_after_success!
+      restic.forget_after_success! if @config.forget_after_backup?
       restic.check! if @config.check_after_backup?
       true
     end

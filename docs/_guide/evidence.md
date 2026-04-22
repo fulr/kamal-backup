@@ -17,6 +17,7 @@ The output includes:
 - database adapter;
 - redacted restic repository;
 - configured file backup paths;
+- whether client-side forget/prune is enabled;
 - retention policy;
 - latest database and file snapshots;
 - last tracked `restic check` result;
