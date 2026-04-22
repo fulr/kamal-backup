@@ -2,13 +2,21 @@ require_relative "test_helper"
 
 class ResticTest < Minitest::Test
   class FakeRestic < KamalBackup::Restic
+    attr_reader :last_args
+
     def initialize(config, json)
       super(config, redactor: KamalBackup::Redactor.new(env: {}))
       @json = json
     end
 
-    def run(_args)
+    def run(args)
+      @last_args = args
       KamalBackup::CommandResult.new(stdout: @json, stderr: "", status: 0)
+    end
+
+    private
+
+    def log(_message)
     end
   end
 
@@ -24,5 +32,16 @@ class ResticTest < Minitest::Test
     snapshots = restic.snapshots_json(tags: ["kamal-backup", "app:demo", "type:database"])
 
     assert_equal ["db"], snapshots.map { |snapshot| snapshot["short_id"] }
+  end
+
+  def test_backup_paths_adds_each_path_label_as_a_tag
+    config = KamalBackup::Config.new(env: base_env("APP_NAME" => "demo"))
+    restic = FakeRestic.new(config, "[]")
+
+    restic.backup_paths(["/data/storage", "/data/uploads"], tags: ["type:files", "run:20260422T120000Z"])
+
+    assert_includes restic.last_args, "--tag"
+    assert_includes restic.last_args, "path:data-storage"
+    assert_includes restic.last_args, "path:data-uploads"
   end
 end

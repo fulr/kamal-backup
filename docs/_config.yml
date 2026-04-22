@@ -1,0 +1,106 @@
+title: kamal-backup
+description: Kamal-first encrypted backups for databases and mounted app files using restic.
+lang: en-US
+timezone: Europe/Berlin
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+permalink: pretty
+theme: jekyll-vitepress-theme
+
+collections:
+  guide:
+    output: true
+    permalink: "/:name/"
+  reference:
+    output: true
+    permalink: "/:name/"
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+  - scope:
+      type: guide
+    values:
+      layout: default
+  - scope:
+      type: reference
+    values:
+      layout: default
+
+jekyll_vitepress:
+  branding:
+    site_title: kamal-backup
+    logo:
+      default: /assets/images/logo.svg
+      alt: kamal-backup
+      width: 24
+      height: 24
+  syntax:
+    light_theme: github
+    dark_theme: github.dark
+  tokens:
+    light:
+      "--vp-c-brand-1": "#2563eb"
+      "--vp-c-brand-2": "#3b82f6"
+      "--vp-c-brand-3": "#1d4ed8"
+      "--vp-c-brand-soft": rgba(37, 99, 235, 0.14)
+    dark:
+      "--vp-c-brand-1": "#60a5fa"
+      "--vp-c-brand-2": "#93c5fd"
+      "--vp-c-brand-3": "#3b82f6"
+      "--vp-c-brand-soft": rgba(96, 165, 250, 0.16)
+  footer:
+    enabled: true
+    show_on_docs: false
+    message: >-
+      Docs built with <a href="https://jekyll-vitepress.dev" target="_blank" rel="noreferrer">Jekyll VitePress</a>.
+    copyright: >-
+      <a href="https://github.com/crmne/kamal-backup" target="_blank" rel="noreferrer">kamal-backup on GitHub</a>
+  doc_footer:
+    enabled: true
+    previous_label: Previous page
+    next_label: Next page
+  last_updated:
+    enabled: true
+    text: Last updated
+    format: "%Y-%m-%d %H:%M"
+  edit_link:
+    enabled: true
+    pattern: "https://github.com/crmne/kamal-backup/edit/master/docs/:path"
+    text: Edit this page on GitHub
+  github_star:
+    enabled: true
+    repository: crmne/kamal-backup
+    text: Star
+    show_count: true
+  labels:
+    outline: On this page
+    sidebar_menu: Menu
+    return_to_top: Return to top
+    skip_to_content: Skip to content
+    appearance_menu: Appearance
+    switch_to_dark: Switch to dark theme
+    switch_to_light: Switch to light theme
+  behavior:
+    scroll_offset: 134
+
+plugins:
+  - jekyll-vitepress-theme
+  - jekyll-redirect-from
+
+exclude:
+  - _site
+  - .jekyll-cache
+  - .sass-cache
+  - .bundle
+  - vendor
+  - Gemfile
+  - Gemfile.lock

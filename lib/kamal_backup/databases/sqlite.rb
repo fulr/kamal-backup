@@ -18,7 +18,7 @@ module KamalBackup
         Tempfile.create(["kamal-backup-", ".sqlite3"]) do |tempfile|
           tempfile.close
           Command.capture(
-            CommandSpec.new(argv: ["sqlite3", source, ".backup #{tempfile.path}"]),
+            CommandSpec.new(argv: ["sqlite3", source, ".backup #{sqlite_literal(tempfile.path)}"]),
             redactor: redactor
           )
           restic.backup_file_content(
@@ -63,6 +63,10 @@ module KamalBackup
           raise ConfigurationError, "refusing in-place SQLite restore to #{target}; set KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true to override"
         end
         super
+      end
+
+      def sqlite_literal(value)
+        "'#{value.to_s.gsub("'", "''")}'"
       end
     end
   end

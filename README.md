@@ -17,7 +17,7 @@ It is aimed at common Kamal backup needs:
 1. A logical database dump from PostgreSQL, MySQL/MariaDB, or SQLite.
 2. Mounted application files such as Rails Active Storage.
 
-Database backups are logical dumps, not raw database data directories. File backups use `restic backup` against configured mounted paths.
+Database backups are logical dumps, not raw database data directories. File backups use one `restic backup` snapshot per run containing all configured mounted paths, so `restore-files latest` restores all file paths from that run.
 
 Database dump snapshots are tagged with `kamal-backup`, `app:<name>`, `type:database`, `adapter:<adapter>`, and `run:<timestamp>`. The dump object uses a flat restic stdin filename such as `databases-chatwithwork-postgres-20260422T120000Z.pgdump` because restic stdin backups do not support nested virtual paths consistently.
 
@@ -232,6 +232,16 @@ Run tests:
 ```sh
 bin/test
 ```
+
+Run docs locally:
+
+```sh
+cd docs
+bundle install
+bundle exec jekyll serve --livereload
+```
+
+Published docs are configured for `https://crmne.github.io/kamal-backup/`.
 
 Build the image:
 

@@ -28,7 +28,7 @@ module KamalBackup
     def self.start(argv = ARGV, env: ENV)
       new(env: env).run(argv)
     rescue Error => e
-      warn("kamal-backup: #{e.message}")
+      warn("kamal-backup: #{Redactor.new(env: env).redact_string(e.message)}")
       exit(1)
     rescue Interrupt
       warn("kamal-backup: interrupted")
@@ -70,9 +70,7 @@ module KamalBackup
       timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
       restic.ensure_repository!
       database.backup(restic, timestamp)
-      @config.backup_paths.each do |path|
-        restic.backup_path(path, tags: ["type:files", "path:#{@config.backup_path_label(path)}", "run:#{timestamp}"])
-      end
+      restic.backup_paths(@config.backup_paths, tags: ["type:files", "run:#{timestamp}"])
       restic.forget_after_success!
       restic.check! if @config.check_after_backup?
       true

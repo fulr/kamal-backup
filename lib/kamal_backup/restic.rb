@@ -50,9 +50,17 @@ module KamalBackup
       raise CommandError.new("command not found: #{command.argv.first}", command: command, status: 127, stderr: e.message)
     end
 
+    def backup_paths(paths, tags:)
+      paths = Array(paths).compact.map(&:to_s).reject(&:empty?)
+      return if paths.empty?
+
+      path_tags = paths.map { |path| "path:#{config.backup_path_label(path)}" }
+      log("backing up #{paths.size} file path(s): #{paths.join(", ")}")
+      run(["backup"] + paths + tag_args(common_tags + tags + path_tags))
+    end
+
     def backup_path(path, tags:)
-      log("backing up path #{path}")
-      run(["backup", path] + tag_args(common_tags + tags))
+      backup_paths([path], tags: tags)
     end
 
     def forget_after_success!

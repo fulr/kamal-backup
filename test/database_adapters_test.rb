@@ -11,14 +11,24 @@ class DatabaseAdaptersTest < Minitest::Test
       "DATABASE_URL" => "postgres://app:secret@db/app"
     ))
     adapter = KamalBackup::Databases::Postgres.new(config, redactor: redactor)
+    command = adapter.dump_command
 
     assert_equal [
       "pg_dump",
       "--format=custom",
       "--no-owner",
-      "--no-privileges",
-      "postgres://app:secret@db/app"
-    ], adapter.dump_command.argv
+      "--no-privileges"
+    ], command.argv
+    refute_includes command.argv.join(" "), "secret"
+    assert_equal(
+      {
+        "PGHOST" => "db",
+        "PGUSER" => "app",
+        "PGPASSWORD" => "secret",
+        "PGDATABASE" => "app"
+      },
+      command.env
+    )
   end
 
   def test_postgres_restore_uses_restore_database_url
@@ -28,9 +38,31 @@ class DatabaseAdaptersTest < Minitest::Test
       "RESTORE_DATABASE_URL" => "postgres://app:secret@db/app_restore"
     ))
     adapter = KamalBackup::Databases::Postgres.new(config, redactor: redactor)
+    command = adapter.restore_command
 
-    assert_includes adapter.restore_command.argv, "postgres://app:secret@db/app_restore"
-    refute_includes adapter.restore_command.argv, "postgres://app:secret@db/app"
+    assert_includes command.argv, "app_restore"
+    refute_includes command.argv.join(" "), "secret"
+    assert_equal(
+      {
+        "PGHOST" => "db",
+        "PGUSER" => "app",
+        "PGPASSWORD" => "secret",
+        "PGDATABASE" => "app_restore"
+      },
+      command.env
+    )
+  end
+
+  def test_postgres_restore_target_identifier_keeps_url_for_exact_safety_check
+    config = KamalBackup::Config.new(env: base_env(
+      "DATABASE_ADAPTER" => "postgres",
+      "DATABASE_URL" => "postgres://app:secret@db/app",
+      "RESTORE_DATABASE_URL" => "postgres://app:secret@db/app"
+    ))
+    adapter = KamalBackup::Databases::Postgres.new(config, redactor: redactor)
+
+    error = assert_raises(KamalBackup::ConfigurationError) { adapter.validate_restore_target! }
+    assert_match(/production-looking restore target/, error.message)
   end
 
   def test_mysql_dump_command_uses_transaction_safe_options_and_password_env
@@ -81,5 +113,15 @@ class DatabaseAdaptersTest < Minitest::Test
       error = assert_raises(KamalBackup::ConfigurationError) { adapter.send(:validate_restore_target!) }
       assert_match(/in-place SQLite restore/, error.message)
     end
+  end
+
+  def test_sqlite_literal_escapes_single_quotes
+    config = KamalBackup::Config.new(env: base_env(
+      "DATABASE_ADAPTER" => "sqlite",
+      "SQLITE_DATABASE_PATH" => "/tmp/app.sqlite3"
+    ))
+    adapter = KamalBackup::Databases::Sqlite.new(config, redactor: redactor)
+
+    assert_equal "'/tmp/kamal''backup.sqlite3'", adapter.send(:sqlite_literal, "/tmp/kamal'backup.sqlite3")
   end
 end
