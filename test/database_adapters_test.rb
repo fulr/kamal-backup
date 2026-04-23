@@ -61,7 +61,7 @@ class DatabaseAdaptersTest < Minitest::Test
     ))
     adapter = KamalBackup::Databases::Postgres.new(config, redactor: redactor)
 
-    error = assert_raises(KamalBackup::ConfigurationError) { adapter.validate_restore_target! }
+    error = assert_raises(KamalBackup::ConfigurationError) { adapter.validate_restore_target }
     assert_match(/production-looking restore target/, error.message)
   end
 
@@ -110,7 +110,7 @@ class DatabaseAdaptersTest < Minitest::Test
       ))
       adapter = KamalBackup::Databases::Sqlite.new(config, redactor: redactor)
 
-      error = assert_raises(KamalBackup::ConfigurationError) { adapter.send(:validate_restore_target!) }
+      error = assert_raises(KamalBackup::ConfigurationError) { adapter.send(:validate_restore_target) }
       assert_match(/in-place SQLite restore/, error.message)
     end
   end

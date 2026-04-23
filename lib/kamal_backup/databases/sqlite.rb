@@ -30,7 +30,7 @@ module KamalBackup
       end
 
       def restore(restic, snapshot, filename)
-        validate_restore_target!
+        validate_restore_target
         restic.write_dump_to_path(snapshot, filename, restore_target)
       end
 
@@ -48,14 +48,14 @@ module KamalBackup
 
       private
         def sqlite_source
-          config.required!("SQLITE_DATABASE_PATH")
+          config.required_value("SQLITE_DATABASE_PATH")
         end
 
         def restore_target
-          config.required!("RESTORE_SQLITE_DATABASE_PATH")
+          config.required_value("RESTORE_SQLITE_DATABASE_PATH")
         end
 
-        def validate_restore_target!
+        def validate_restore_target
           source = File.expand_path(sqlite_source)
           target = File.expand_path(restore_target)
           if source == target && !config.allow_in_place_file_restore?

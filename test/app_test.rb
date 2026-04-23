@@ -15,7 +15,7 @@ class AppTest < Minitest::Test
       @restore_snapshot_calls = []
     end
 
-    def ensure_repository!
+    def ensure_repository
       @ensure_repository_calls += 1
     end
 
@@ -23,11 +23,11 @@ class AppTest < Minitest::Test
       @backup_path_calls << { paths: paths, tags: tags }
     end
 
-    def forget_after_success!
+    def forget_after_success
       @forget_calls += 1
     end
 
-    def check!
+    def check
       @check_calls += 1
       KamalBackup::CommandResult.new(stdout: "checked", stderr: "", status: 0)
     end

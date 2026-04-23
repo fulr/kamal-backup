@@ -1,8 +1,26 @@
 ---
 title: Getting Started
-description: Add kamal-backup as a Kamal accessory and run the first backup.
+description: Add kamal-backup as a Kamal accessory, choose a restic repository, and run the first backup.
 nav_order: 1
 ---
+
+This guide assumes:
+
+- you already deploy the app with Kamal;
+- your database is PostgreSQL, MySQL/MariaDB, or SQLite;
+- any file data you want to back up is available on a mounted path such as `/data/storage`.
+
+In normal Kamal use, there is no app-host installation step for restic. The `kamal-backup` image already includes it.
+
+## Choose a restic repository
+
+Before you boot the accessory, decide where the backups will live. Common choices are:
+
+- S3-compatible object storage;
+- a restic REST server you run separately;
+- a filesystem path for local development.
+
+`kamal-backup` writes to that repository through restic. It does not manage the repository service for you.
 
 ## Add the accessory
 
@@ -47,7 +65,7 @@ bin/kamal accessory boot backup
 bin/kamal accessory logs backup
 ```
 
-## Run manually
+## Run the first backup
 
 The production interface is the accessory container. The image ships the `kamal-backup` executable, so you can run one-off commands through Kamal:
 
@@ -59,6 +77,13 @@ bin/kamal backup-evidence
 bin/kamal backup-version
 bin/kamal backup-schedule
 bin/kamal backup-logs
+```
+
+After the first run, inspect the snapshots and evidence:
+
+```sh
+bin/kamal backup-list
+bin/kamal backup-evidence
 ```
 
 Recommended aliases:
@@ -75,13 +100,11 @@ Recommended aliases:
 
 Restore commands are intentionally not aliased in the default block. They require explicit restore flags and restore-specific targets, so run `bin/kamal accessory exec backup "kamal-backup ..."` directly.
 
-You do not need any installation step on the app host. The accessory image already contains the `kamal-backup` executable.
-
-## What gets backed up
+## What the first backup creates
 
 Each backup run creates:
 
-- one logical database dump stored through restic stdin;
+- one database backup stored through restic stdin;
 - one `type:files` restic snapshot containing all configured `BACKUP_PATHS` entries.
 
 Database dump snapshots are tagged with `kamal-backup`, `app:<name>`, `type:database`, `adapter:<adapter>`, and `run:<timestamp>`. File snapshots use `type:files`, the same run tag, and informational `path:<label>` tags for the configured paths. Restore selects by `type:files`, not by one path tag.

@@ -1,10 +1,26 @@
 ---
 title: Configuration
-description: Required environment, database settings, restic repository options, retention, and scheduler flags.
-nav_order: 2
+description: Required environment, restic repository choices, database settings, mounted file paths, retention, and scheduler flags.
+nav_order: 3
 ---
 
-## Common environment
+## Restic in normal Kamal use
+
+`kamal-backup` uses restic under the hood.
+
+In the normal Kamal setup, restic runs inside the backup accessory container. You do not install restic on the Rails app host. You only configure a restic repository for the accessory to use.
+
+Repository examples:
+
+```sh
+RESTIC_REPOSITORY=s3:https://s3.example.com/chatwithwork-backups
+RESTIC_REPOSITORY=rest:https://backup.example.com/chatwithwork
+RESTIC_REPOSITORY=/var/backups/chatwithwork
+```
+
+If you use a `rest:` repository, the restic REST server is a separate service. `kamal-backup` talks to it, but does not install or operate it for you.
+
+## Core environment
 
 ```sh
 APP_NAME=chatwithwork
@@ -15,6 +31,10 @@ BACKUP_PATHS=/data/storage
 ```
 
 `BACKUP_PATHS` accepts colon-separated or newline-separated paths. Every configured path must exist before a backup starts.
+
+Use `BACKUP_PATHS` for file data that lives on mounted volumes, such as file-backed Rails Active Storage.
+
+If your app stores Active Storage blobs directly in S3, there may be no local path to include here.
 
 ## Database settings
 
@@ -43,7 +63,7 @@ SQLITE_DATABASE_PATH=/data/db/production.sqlite3
 
 If `DATABASE_ADAPTER` is omitted, `kamal-backup` tries to detect the adapter from `DATABASE_URL` or `SQLITE_DATABASE_PATH`.
 
-## Restic and S3-compatible storage
+## S3-compatible storage and secrets
 
 `kamal-backup` passes standard restic environment through unchanged. For S3-compatible repositories, configure credentials as Kamal secrets:
 
@@ -55,7 +75,7 @@ AWS_DEFAULT_REGION=...
 
 Use object storage credentials scoped to the backup bucket or prefix. They should not have access to unrelated buckets.
 
-## Retention
+## Retention and pruning
 
 Defaults:
 
@@ -72,7 +92,7 @@ After a successful backup, `kamal-backup` runs `restic forget --prune` with the 
 
 Set `RESTIC_FORGET_AFTER_BACKUP=false` for append-only repositories, such as a restic REST server started with `--append-only`. Retention and prune should then run from the backup server or another trusted maintenance process with delete permissions.
 
-## Scheduler
+## Scheduler and checks
 
 The default container command is:
 

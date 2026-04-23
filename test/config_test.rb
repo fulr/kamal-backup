@@ -28,7 +28,7 @@ class ConfigTest < Minitest::Test
   def test_refuses_suspicious_backup_path
     config = KamalBackup::Config.new(env: base_env("DATABASE_ADAPTER" => "postgres", "DATABASE_URL" => "postgres://app@db/app", "BACKUP_PATHS" => "/"))
 
-    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_backup_paths! }
+    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_backup_paths }
     assert_match(/refusing suspicious backup path/, error.message)
   end
 
@@ -36,14 +36,14 @@ class ConfigTest < Minitest::Test
     Dir.mktmpdir do |dir|
       config = KamalBackup::Config.new(env: base_env("BACKUP_PATHS" => dir))
 
-      config.validate_backup_paths!
+      config.validate_backup_paths
     end
   end
 
   def test_restore_requires_explicit_flag
     config = KamalBackup::Config.new(env: base_env)
 
-    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_restore_allowed! }
+    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_restore_allowed }
     assert_match(/KAMAL_BACKUP_ALLOW_RESTORE=true/, error.message)
   end
 
@@ -51,7 +51,7 @@ class ConfigTest < Minitest::Test
     config = KamalBackup::Config.new(env: base_env)
 
     error = assert_raises(KamalBackup::ConfigurationError) do
-      config.validate_database_restore_target!("postgres://app@db/app_production")
+      config.validate_database_restore_target("postgres://app@db/app_production")
     end
     assert_match(/production-looking/, error.message)
   end

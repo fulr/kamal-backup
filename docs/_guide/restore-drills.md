@@ -1,7 +1,7 @@
 ---
 title: Restore Drills
-description: Run deliberate database and file restores with explicit safety flags.
-nav_order: 3
+description: Run deliberate database and file restores, and record the result in the language a reviewer expects.
+nav_order: 4
 ---
 
 Restores are designed to be explicit manual operations. Every restore command requires:
@@ -12,9 +12,19 @@ KAMAL_BACKUP_ALLOW_RESTORE=true
 
 For production-adjacent drills, run restore commands through the backup accessory so they use the same image and tool versions as scheduled backups.
 
+When you run a drill, record:
+
+- when you ran it;
+- who ran it;
+- which snapshot you restored;
+- which restore target you used;
+- whether the restored data looked correct.
+
+That note matters almost as much as the command output when you later need to explain your process to a reviewer.
+
 ## Database restores
 
-Database restores use restore-specific environment by default. They do not restore to `DATABASE_URL`.
+Database restores use restore-specific environment by default. They do not restore into `DATABASE_URL`.
 
 PostgreSQL:
 
@@ -65,4 +75,4 @@ Restoring into configured backup paths is refused unless:
 KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true
 ```
 
-Use restore drills regularly. A backup that has never been restored is only an assumption.
+Use restore drills regularly. A backup that has never been restored is still only an assumption.

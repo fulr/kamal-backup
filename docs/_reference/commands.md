@@ -1,6 +1,6 @@
 ---
 title: Commands
-description: Command reference for the kamal-backup executable.
+description: Command reference for the kamal-backup executable and the most common Kamal alias flows.
 nav_order: 1
 ---
 
@@ -50,12 +50,12 @@ Use `kamal-backup help [command]` for task-specific usage.
 
 | Command | Description |
 |---|---|
-| `backup` | Run one backup immediately. It creates one logical database snapshot and one file snapshot containing every configured `BACKUP_PATHS` entry. It runs `forget --prune` afterward unless `RESTIC_FORGET_AFTER_BACKUP=false`. |
-| `restore-db [snapshot-or-latest]` | Restore a database dump from a snapshot. Defaults to `latest`. Requires `KAMAL_BACKUP_ALLOW_RESTORE=true` and restore-specific database environment. |
-| `restore-files [snapshot-or-latest] [target-dir]` | Restore file snapshots. Defaults to `latest /restore/files`. In-place restores require `KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true`. |
-| `list` | Show matching restic snapshots for the configured app. |
+| `backup` | Create one database backup and one file snapshot for the current app. It runs `forget --prune` afterward unless `RESTIC_FORGET_AFTER_BACKUP=false`. |
+| `restore-db [snapshot-or-latest]` | Restore a database backup from a snapshot. Defaults to `latest`. Requires `KAMAL_BACKUP_ALLOW_RESTORE=true` and restore-specific database environment. |
+| `restore-files [snapshot-or-latest] [target-dir]` | Restore the file snapshot into a target directory. Defaults to `latest /restore/files`. In-place restores require `KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true`. |
+| `list` | Show restic snapshots for the configured app tags. |
 | `check` | Run `restic check` and store the latest result under `KAMAL_BACKUP_STATE_DIR`. |
-| `evidence` | Print redacted operational evidence as JSON, including latest snapshots, check status, retention, and tool versions. |
+| `evidence` | Print redacted JSON you can attach to ops records or security reviews, including latest snapshots, latest check result, retention, and tool versions. |
 | `schedule` | Run the foreground scheduler loop used by the Docker image default command. |
 | `version` | Print the running `kamal-backup` version. `--version` and `-v` do the same. |
 

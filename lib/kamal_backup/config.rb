@@ -23,8 +23,8 @@ module KamalBackup
       value("APP_NAME")
     end
 
-    def app_name!
-      required!("APP_NAME")
+    def required_app_name
+      required_value("APP_NAME")
     end
 
     def restic_repository
@@ -123,19 +123,19 @@ module KamalBackup
       end
     end
 
-    def validate_for_restic!
-      app_name!
-      required!("RESTIC_REPOSITORY")
-      required!("RESTIC_PASSWORD")
+    def validate_restic
+      required_app_name
+      required_value("RESTIC_REPOSITORY")
+      required_value("RESTIC_PASSWORD")
     end
 
-    def validate_for_backup!
-      validate_for_restic!
-      validate_database_backup!
-      validate_backup_paths!
+    def validate_backup
+      validate_restic
+      validate_database_backup
+      validate_backup_paths
     end
 
-    def validate_database_backup!
+    def validate_database_backup
       case database_adapter
       when "postgres"
         unless value("DATABASE_URL") || value("PGDATABASE")
@@ -146,14 +146,14 @@ module KamalBackup
           raise ConfigurationError, "MySQL backup requires DATABASE_URL or MYSQL_DATABASE/MARIADB_DATABASE"
         end
       when "sqlite"
-        path = required!("SQLITE_DATABASE_PATH")
+        path = required_value("SQLITE_DATABASE_PATH")
         raise ConfigurationError, "SQLITE_DATABASE_PATH does not exist: #{path}" unless File.file?(path)
       else
         raise ConfigurationError, "DATABASE_ADAPTER is required or must be detectable from DATABASE_URL/SQLITE_DATABASE_PATH"
       end
     end
 
-    def validate_backup_paths!
+    def validate_backup_paths
       paths = backup_paths
       raise ConfigurationError, "BACKUP_PATHS must contain at least one path" if paths.empty?
 
@@ -166,13 +166,13 @@ module KamalBackup
       end
     end
 
-    def validate_restore_allowed!
+    def validate_restore_allowed
       unless allow_restore?
         raise ConfigurationError, "restore commands require KAMAL_BACKUP_ALLOW_RESTORE=true"
       end
     end
 
-    def validate_file_restore_target!(target)
+    def validate_file_restore_target(target)
       raise ConfigurationError, "restore target cannot be empty" if target.to_s.strip.empty?
 
       expanded_target = File.expand_path(target)
@@ -185,7 +185,7 @@ module KamalBackup
       expanded_target
     end
 
-    def validate_database_restore_target!(target)
+    def validate_database_restore_target(target)
       raise ConfigurationError, "restore database target is required" if target.to_s.strip.empty?
 
       if production_like_target?(target) && !allow_production_restore?
@@ -211,7 +211,7 @@ module KamalBackup
       stripped.empty? ? nil : stripped
     end
 
-    def required!(key)
+    def required_value(key)
       value(key) || raise(ConfigurationError, "#{key} is required")
     end
 

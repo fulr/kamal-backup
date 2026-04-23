@@ -13,7 +13,7 @@ module KamalBackup
       @redactor = redactor
     end
 
-    def ensure_repository!
+    def ensure_repository
       run(%w[snapshots --json])
     rescue CommandError => e
       if config.restic_init_if_missing?
@@ -66,13 +66,13 @@ module KamalBackup
       backup_paths([path], tags: tags)
     end
 
-    def forget_after_success!
+    def forget_after_success
       args = ["forget", "--prune"] + config.retention_args + tag_args(common_tags)
       log("running restic forget/prune with retention policy")
       run(args)
     end
 
-    def check!
+    def check
       args = %w[check]
       args.concat(["--read-data-subset", config.check_read_data_subset]) if config.check_read_data_subset
       started_at = Time.now.utc

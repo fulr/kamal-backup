@@ -1,6 +1,6 @@
 ---
-title: Security Model
-description: Backup and restore safety properties.
+title: Security and Restore Safety
+description: How kamal-backup handles secrets, subprocesses, backup formats, and deliberate restores.
 nav_order: 2
 ---
 
@@ -21,15 +21,15 @@ External tools are executed with argument arrays, not shell interpolation. The b
 
 ## Database backups
 
-Database backups use logical dump tools:
+Database backups use database-native export tools:
 
 - PostgreSQL: `pg_dump --format=custom --no-owner --no-privileges`
 - MySQL/MariaDB: `mariadb-dump` or `mysqldump` with transaction-safe defaults
 - SQLite: `sqlite3 <db> ".backup ..."`
 
-Raw database data directories are not used as the primary database backup.
+This is why the docs talk about database backups rather than raw database directories. `kamal-backup` is exporting application data with the tools Rails teams already use for dumps and restores.
 
-## Restore gates
+## Deliberate restores
 
 All restore commands require `KAMAL_BACKUP_ALLOW_RESTORE=true`.
 
@@ -41,3 +41,5 @@ Database restores use restore-specific targets:
 Production-looking targets are refused unless `KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true`.
 
 File restores into configured backup paths are refused unless `KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true`.
+
+Those checks are there to make restore drills deliberate. They also help when you need to explain to a reviewer that backup restores cannot quietly point back at production by accident.

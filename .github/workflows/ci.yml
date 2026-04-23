@@ -90,17 +90,9 @@ jobs:
             prerelease_args=(--prerelease)
           fi
 
-          cat > release-notes.md <<NOTES
-          Release $TAG of kamal-backup.
-
-          Image: ghcr.io/crmne/kamal-backup:$VERSION
-          Docs: https://kamal-backup.dev
-          NOTES
-
           gh release create "$TAG" \
             --target "$GITHUB_SHA" \
-            --title "$TAG" \
-            --notes-file release-notes.md \
+            --generate-notes \
             "${prerelease_args[@]}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

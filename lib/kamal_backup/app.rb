@@ -22,27 +22,27 @@ module KamalBackup
     end
 
     def backup
-      config.validate_for_backup!
+      config.validate_backup
 
       timestamp = current_timestamp
-      restic.ensure_repository!
+      restic.ensure_repository
       database.backup(restic, timestamp)
       restic.backup_paths(config.backup_paths, tags: ["type:files", "run:#{timestamp}"])
 
       if config.forget_after_backup?
-        restic.forget_after_success!
+        restic.forget_after_success
       end
 
       if config.check_after_backup?
-        restic.check!
+        restic.check
       end
 
       true
     end
 
     def restore_database(snapshot = "latest")
-      config.validate_for_restic!
-      config.validate_restore_allowed!
+      config.validate_restic
+      config.validate_restore_allowed
 
       adapter = database
       resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:database", "adapter:#{adapter.adapter_name}"])
@@ -57,32 +57,32 @@ module KamalBackup
     end
 
     def restore_files(snapshot = "latest", target: "/restore/files")
-      config.validate_for_restic!
-      config.validate_restore_allowed!
+      config.validate_restic
+      config.validate_restore_allowed
 
       resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:files"])
-      validated_target = config.validate_file_restore_target!(target)
+      validated_target = config.validate_file_restore_target(target)
       restic.restore_snapshot(resolved_snapshot, validated_target)
       true
     end
 
     def snapshots
-      config.validate_for_restic!
+      config.validate_restic
       restic.snapshots.stdout
     end
 
     def check
-      config.validate_for_restic!
-      restic.check!.stdout
+      config.validate_restic
+      restic.check.stdout
     end
 
     def evidence
-      config.validate_for_restic!
+      config.validate_restic
       @evidence_class.new(config, restic: restic, redactor: redactor).to_json
     end
 
     def schedule
-      config.validate_for_backup!
+      config.validate_backup
       @scheduler_class.new(config) { backup }.run
     end
 
