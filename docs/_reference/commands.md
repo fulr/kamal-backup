@@ -18,7 +18,20 @@ With the recommended aliases from the getting-started guide, the same command be
 bin/kamal backup-evidence
 ```
 
-The gem is still useful as a laptop-side operator CLI for restore drills, but it is not required on the production app host.
+Recommended Kamal aliases:
+
+```yaml
+aliases:
+  backup: accessory exec backup "kamal-backup backup"
+  backup-list: accessory exec backup "kamal-backup list"
+  backup-check: accessory exec backup "kamal-backup check"
+  backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-version: accessory exec backup "kamal-backup version"
+  backup-schedule: accessory exec backup "kamal-backup schedule"
+  backup-logs: accessory logs backup -f
+```
+
+The production interface is the accessory container. There is no installation step on the app host.
 
 ```sh
 kamal-backup backup
@@ -42,14 +55,18 @@ kamal-backup version
 | `check` | Run `restic check` and store the latest result under `KAMAL_BACKUP_STATE_DIR`. |
 | `evidence` | Print redacted operational evidence as JSON, including latest snapshots, check status, retention, and tool versions. |
 | `schedule` | Run the foreground scheduler loop used by the Docker image default command. |
-| `version` | Print the gem version. `--version` and `-v` do the same. |
+| `version` | Print the running `kamal-backup` version. `--version` and `-v` do the same. |
 
-## Local Ruby install
+## Alias Notes
 
-The Docker image installs the project as the `kamal-backup` gem. To install the same executable locally from a checkout:
+| Alias | Purpose |
+|---|---|
+| `backup` | Run one backup immediately. |
+| `backup-list` | Show snapshots for the configured app tags. |
+| `backup-check` | Run `restic check`. |
+| `backup-evidence` | Print redacted operational evidence JSON. |
+| `backup-version` | Show the running `kamal-backup` version inside the accessory. |
+| `backup-schedule` | Run the foreground scheduler loop manually. Mostly useful for debugging. |
+| `backup-logs` | Tail backup accessory logs. |
 
-```sh
-gem build kamal-backup.gemspec
-gem install ./kamal-backup-*.gem
-kamal-backup --help
-```
+Restore commands are intentionally not part of the default alias block. They require explicit restore flags and restore-specific targets, so call the accessory directly.

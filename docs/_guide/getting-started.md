@@ -14,6 +14,8 @@ aliases:
   backup-list: accessory exec backup "kamal-backup list"
   backup-check: accessory exec backup "kamal-backup check"
   backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-version: accessory exec backup "kamal-backup version"
+  backup-schedule: accessory exec backup "kamal-backup schedule"
   backup-logs: accessory logs backup -f
 
 accessories:
@@ -47,13 +49,15 @@ bin/kamal accessory logs backup
 
 ## Run manually
 
-The production interface is the accessory container. The image installs the `kamal-backup` executable, so you can run one-off commands through Kamal:
+The production interface is the accessory container. The image ships the `kamal-backup` executable, so you can run one-off commands through Kamal:
 
 ```sh
 bin/kamal backup
 bin/kamal backup-list
 bin/kamal backup-check
 bin/kamal backup-evidence
+bin/kamal backup-version
+bin/kamal backup-schedule
 bin/kamal backup-logs
 ```
 
@@ -65,9 +69,13 @@ Recommended aliases:
 | `bin/kamal backup-list` | `accessory exec backup "kamal-backup list"` | Show restic snapshots for the configured app. |
 | `bin/kamal backup-check` | `accessory exec backup "kamal-backup check"` | Run `restic check` and store the latest check result. |
 | `bin/kamal backup-evidence` | `accessory exec backup "kamal-backup evidence"` | Print redacted backup evidence JSON. |
+| `bin/kamal backup-version` | `accessory exec backup "kamal-backup version"` | Print the running `kamal-backup` version. |
+| `bin/kamal backup-schedule` | `accessory exec backup "kamal-backup schedule"` | Run the foreground scheduler loop manually. Mostly useful for debugging. |
 | `bin/kamal backup-logs` | `accessory logs backup -f` | Tail the backup accessory logs. |
 
-You do not need to install the gem on the app host. Installing the gem locally is optional and mainly useful for laptop-side restore drills where the operator machine has restic, database clients, and the required secrets.
+Restore commands are intentionally not aliased in the default block. They require explicit restore flags and restore-specific targets, so run `bin/kamal accessory exec backup "kamal-backup ..."` directly.
+
+You do not need any installation step on the app host. The accessory image already contains the `kamal-backup` executable.
 
 ## What gets backed up
 

@@ -1,10 +1,6 @@
 FROM ruby:3.3-slim
 
-ARG KAMAL_BACKUP_VERSION=0.1.0.pre.1
-
-ENV KAMAL_BACKUP_VERSION=$KAMAL_BACKUP_VERSION \
-    KAMAL_BACKUP_IMAGE_VERSION=$KAMAL_BACKUP_VERSION \
-    KAMAL_BACKUP_STATE_DIR=/var/lib/kamal-backup
+ENV KAMAL_BACKUP_STATE_DIR=/var/lib/kamal-backup
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
@@ -18,13 +14,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY Gemfile kamal-backup.gemspec README.md LICENSE ./
+COPY README.md LICENSE ./
 COPY exe ./exe
 COPY lib ./lib
 
-RUN gem build kamal-backup.gemspec \
-  && gem install --no-document kamal-backup-*.gem \
-  && rm -f kamal-backup-*.gem \
+RUN ln -s /app/exe/kamal-backup /usr/local/bin/kamal-backup \
   && mkdir -p /var/lib/kamal-backup /restore/files
 
 ENTRYPOINT ["/usr/bin/tini", "--"]

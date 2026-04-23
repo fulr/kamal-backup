@@ -10,7 +10,7 @@ Restores are designed to be explicit manual operations. Every restore command re
 KAMAL_BACKUP_ALLOW_RESTORE=true
 ```
 
-For production-adjacent drills, run restore commands through the backup accessory so they use the same image and tool versions as scheduled backups. A local gem install is useful when the restore target is reachable from your laptop and you want one command to pull from restic and run the database restore client locally.
+For production-adjacent drills, run restore commands through the backup accessory so they use the same image and tool versions as scheduled backups.
 
 ## Database restores
 

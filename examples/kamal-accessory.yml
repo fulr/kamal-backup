@@ -3,6 +3,8 @@ aliases:
   backup-list: accessory exec backup "kamal-backup list"
   backup-check: accessory exec backup "kamal-backup check"
   backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-version: accessory exec backup "kamal-backup version"
+  backup-schedule: accessory exec backup "kamal-backup schedule"
   backup-logs: accessory logs backup -f
 
 accessories:

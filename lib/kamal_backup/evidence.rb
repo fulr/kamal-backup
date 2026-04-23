@@ -23,7 +23,7 @@ module KamalBackup
         latest_database_backup: latest_snapshot_summary(["type:database"]),
         latest_file_backup: latest_snapshot_summary(["type:files"]),
         last_restic_check: last_check,
-        image_version: ENV.fetch("KAMAL_BACKUP_IMAGE_VERSION", VERSION),
+        image_version: VERSION,
         tool_versions: tool_versions
       }
     end

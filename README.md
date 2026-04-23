@@ -2,7 +2,7 @@
 
 `kamal-backup` is a small Docker image for Kamal accessories. It creates encrypted, restic-backed backups for self-hosted apps by backing up database dumps and mounted application files together.
 
-The Docker image is the normal production interface. The Ruby gem packages the same `kamal-backup` executable so the image can install it cleanly, and so operators can optionally run the CLI from a laptop for restore drills when they have restic, database clients, and the right environment configured.
+The Docker image is the normal production interface. The image ships the `kamal-backup` executable directly, so operators run it through the accessory container.
 
 It is aimed at common Kamal backup needs:
 
@@ -33,6 +33,8 @@ aliases:
   backup-list: accessory exec backup "kamal-backup list"
   backup-check: accessory exec backup "kamal-backup check"
   backup-evidence: accessory exec backup "kamal-backup evidence"
+  backup-version: accessory exec backup "kamal-backup version"
+  backup-schedule: accessory exec backup "kamal-backup schedule"
   backup-logs: accessory logs backup -f
 
 accessories:
@@ -71,6 +73,8 @@ bin/kamal backup
 bin/kamal backup-list
 bin/kamal backup-check
 bin/kamal backup-evidence
+bin/kamal backup-version
+bin/kamal backup-schedule
 bin/kamal backup-logs
 ```
 
@@ -82,11 +86,22 @@ Alias reference:
 | `bin/kamal backup-list` | `accessory exec backup "kamal-backup list"` | Show restic snapshots for the configured app. |
 | `bin/kamal backup-check` | `accessory exec backup "kamal-backup check"` | Run `restic check` and store the latest check result. |
 | `bin/kamal backup-evidence` | `accessory exec backup "kamal-backup evidence"` | Print redacted backup evidence JSON. |
+| `bin/kamal backup-version` | `accessory exec backup "kamal-backup version"` | Print the running `kamal-backup` version. |
+| `bin/kamal backup-schedule` | `accessory exec backup "kamal-backup schedule"` | Run the foreground scheduler loop manually. Mostly useful for debugging. |
 | `bin/kamal backup-logs` | `accessory logs backup -f` | Tail the backup accessory logs. |
+
+Restore commands are intentionally not part of the default alias block. They require explicit restore flags and restore-specific targets, so run them with raw Kamal commands such as:
+
+```sh
+bin/kamal accessory exec backup \
+  --env KAMAL_BACKUP_ALLOW_RESTORE=true \
+  --env RESTORE_DATABASE_URL=postgres://app@app-db:5432/app_restore \
+  "kamal-backup restore-db 19ce9f99"
+```
 
 ## Commands
 
-Commands usually run inside the production backup accessory with `bin/kamal accessory exec backup "kamal-backup <command>"`, or through Kamal aliases such as `bin/kamal backup`. A local gem install is useful when you intentionally want the operator laptop to run restic and database client commands directly.
+Commands usually run inside the production backup accessory with `bin/kamal accessory exec backup "kamal-backup <command>"`, or through Kamal aliases such as `bin/kamal backup`.
 
 ```sh
 kamal-backup backup
@@ -108,7 +123,7 @@ kamal-backup version
 | `check` | Runs `restic check` and records the latest result for evidence output. |
 | `evidence` | Prints redacted JSON with backup configuration, latest snapshots, check status, and tool versions. |
 | `schedule` | Runs the foreground scheduler loop used by the container default command. |
-| `version` | Prints the gem version. `--version` and `-v` do the same. |
+| `version` | Prints the running `kamal-backup` version. `--version` and `-v` do the same. |
 
 The default container command is:
 
@@ -288,19 +303,11 @@ Build the image:
 docker build -t kamal-backup .
 ```
 
-CI publishes container images to `ghcr.io/crmne/kamal-backup`. Pull requests build the image without pushing; branch, tag, SHA, default-branch `latest`, and default-branch version tags are pushed on non-PR builds. The version tag comes from `lib/kamal_backup/version.rb`, matching the gem version.
+CI publishes container images to `ghcr.io/crmne/kamal-backup`. Pull requests build the image without pushing; branch, tag, SHA, default-branch `latest`, and default-branch version tags are pushed on non-PR builds. The version tag comes from `lib/kamal_backup/version.rb`, and default-branch pushes also create the matching GitHub release.
 
-The CLI is packaged as the `kamal-backup` gem. The Docker image builds and installs that gem, which is why `kamal-backup` is on `PATH` inside the container. On default-branch CI, a new gem version is published to RubyGems and GitHub Packages when it does not already exist. The RubyGems publish step expects the repository secret `RUBYGEMS_AUTH_TOKEN`.
+The Docker image copies the Ruby CLI directly from `exe/` and `lib/`, which is why `kamal-backup` is on `PATH` inside the container.
 
-For local Ruby use:
-
-```sh
-gem build kamal-backup.gemspec
-gem install ./kamal-backup-*.gem
-kamal-backup --help
-```
-
-In normal Kamal use, you do not need to install the gem on the app host. Run the command inside the accessory:
+In normal Kamal use, there is no installation step on the app host. Run the command inside the accessory:
 
 ```sh
 bin/kamal accessory exec backup "kamal-backup evidence"

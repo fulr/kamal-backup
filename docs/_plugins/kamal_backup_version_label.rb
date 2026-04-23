@@ -37,22 +37,13 @@ module KamalBackupDocs
     end
 
     def resolve_version(site)
-      from_loaded_constant || from_installed_gem || from_version_file(site)
+      from_loaded_constant || from_version_file(site)
     end
 
     def from_loaded_constant
       return nil unless defined?(::KamalBackup::VERSION)
 
       normalize_version(::KamalBackup::VERSION)
-    end
-
-    def from_installed_gem
-      spec = Gem::Specification.find_all_by_name("kamal-backup").max_by(&:version)
-      return nil unless spec
-
-      normalize_version(spec.version.to_s)
-    rescue StandardError
-      nil
     end
 
     def from_version_file(site)
