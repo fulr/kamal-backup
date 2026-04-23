@@ -13,6 +13,7 @@ module KamalBackup
     map %w[-v --version] => :version
     map "restore-db" => :restore_database
     map "restore-files" => :restore_files
+    map "restore-local" => :restore_local
     remove_command :tree
 
     def self.basename
@@ -50,6 +51,11 @@ module KamalBackup
     desc "restore-files [SNAPSHOT] [TARGET_DIR]", "Restore backed up files into a target directory"
     def restore_files(snapshot = "latest", target_dir = "/restore/files")
       app.restore_files(snapshot, target: target_dir)
+    end
+
+    desc "restore-local [SNAPSHOT]", "Restore database and files into the current local environment"
+    def restore_local(snapshot = "latest")
+      app.restore_local(snapshot)
     end
 
     desc "list", "List matching restic snapshots"

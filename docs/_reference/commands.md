@@ -37,6 +37,7 @@ The production interface is the accessory container. There is no installation st
 kamal-backup backup
 kamal-backup restore-db [snapshot-or-latest]
 kamal-backup restore-files [snapshot-or-latest] [target-dir]
+kamal-backup restore-local [snapshot-or-latest]
 kamal-backup list
 kamal-backup check
 kamal-backup evidence
@@ -53,6 +54,7 @@ Use `kamal-backup help [command]` for task-specific usage.
 | `backup` | Create one database backup and one file snapshot for the current app. It runs `forget --prune` afterward unless `RESTIC_FORGET_AFTER_BACKUP=false`. |
 | `restore-db [snapshot-or-latest]` | Restore a database backup from a snapshot. Defaults to `latest`. Requires `KAMAL_BACKUP_ALLOW_RESTORE=true` and restore-specific database environment. |
 | `restore-files [snapshot-or-latest] [target-dir]` | Restore the file snapshot into a target directory. Defaults to `latest /restore/files`. In-place restores require `KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true`. |
+| `restore-local [snapshot-or-latest]` | Restore the latest database and file snapshots into the current local database settings and `BACKUP_PATHS`. Best for local development checks and small-app restore drills. |
 | `list` | Show restic snapshots for the configured app tags. |
 | `check` | Run `restic check` and store the latest result under `KAMAL_BACKUP_STATE_DIR`. |
 | `evidence` | Print redacted JSON you can attach to ops records or security reviews, including latest snapshots, latest check result, retention, and tool versions. |
@@ -72,3 +74,5 @@ Use `kamal-backup help [command]` for task-specific usage.
 | `backup-logs` | Tail backup accessory logs. |
 
 Restore commands are intentionally not part of the default alias block. They require explicit restore flags and restore-specific targets, so call the accessory directly.
+
+`restore-local` is the exception. It is meant to run on a developer machine or another non-production environment where the current `DATABASE_URL` or `SQLITE_DATABASE_PATH` and `BACKUP_PATHS` point at local scratch data. If the backup was taken from different production file paths, set `LOCAL_RESTORE_SOURCE_PATHS` to those source paths before running the local restore.

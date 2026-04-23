@@ -127,6 +127,7 @@ Commands usually run inside the production backup accessory with `bin/kamal acce
 kamal-backup backup
 kamal-backup restore-db [snapshot-or-latest]
 kamal-backup restore-files [snapshot-or-latest] [target-dir]
+kamal-backup restore-local [snapshot-or-latest]
 kamal-backup list
 kamal-backup check
 kamal-backup evidence
@@ -141,6 +142,7 @@ Use `kamal-backup help [command]` for command-specific usage and examples.
 | `backup` | Creates one database backup and one file snapshot for all configured `BACKUP_PATHS`. |
 | `restore-db [snapshot-or-latest]` | Restores a database backup. Defaults to `latest` and requires explicit restore environment. |
 | `restore-files [snapshot-or-latest] [target-dir]` | Restores file paths from the file snapshot. Defaults to `latest /restore/files`. |
+| `restore-local [snapshot-or-latest]` | Restores the latest database and file snapshots into the current local database settings and `BACKUP_PATHS`. Best for local development verification. |
 | `list` | Lists restic snapshots for the configured app tags. |
 | `check` | Runs `restic check` and records the latest result for evidence output. |
 | `evidence` | Prints redacted JSON with backup configuration, latest snapshots, latest check result, and tool versions. |
@@ -237,6 +239,16 @@ Restores are intentionally hard to run by accident. Every restore command requir
 ```sh
 KAMAL_BACKUP_ALLOW_RESTORE=true
 ```
+
+For small apps, the fastest proof that a backup is real is often a restore straight into your local development environment:
+
+```sh
+KAMAL_BACKUP_ALLOW_RESTORE=true bundle exec exe/kamal-backup restore-local
+```
+
+`restore-local` uses your current `DATABASE_URL` or `SQLITE_DATABASE_PATH`, plus your current `BACKUP_PATHS`. It restores files through a temporary staging directory and then replaces those local paths with the restored copy. If the production backup path and the local path differ, set `LOCAL_RESTORE_SOURCE_PATHS` to the production path list and keep `BACKUP_PATHS` pointed at the local targets. It refuses to run when `RAILS_ENV`, `RACK_ENV`, `APP_ENV`, or `KAMAL_ENVIRONMENT` is set to `production` unless you explicitly override that safety check. That makes it a good fit for developer laptops, small Rails apps, and quick "does this actually come back?" checks.
+
+If you are working with a bigger app, use the explicit accessory restore commands below against a scratch database and scratch file path instead. That keeps drills closer to production scale without pointing the restore back at live data.
 
 Database restores use restore-specific environment by default. They do not restore to `DATABASE_URL`.
 

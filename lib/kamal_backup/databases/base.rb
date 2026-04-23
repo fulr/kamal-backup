@@ -37,6 +37,11 @@ module KamalBackup
         restic.pipe_dump_to_command(snapshot, filename, restore_command)
       end
 
+      def restore_local(restic, snapshot, filename)
+        validate_local_restore_target
+        restic.pipe_dump_to_command(snapshot, filename, local_restore_command)
+      end
+
       def database_filename(timestamp)
         app = config.app_name.gsub(/[^A-Za-z0-9_.-]+/, "-")
         "databases-#{app}-#{adapter_name}-#{timestamp}.#{dump_extension}"
@@ -62,11 +67,23 @@ module KamalBackup
         raise NotImplementedError
       end
 
+      def local_restore_command
+        raise NotImplementedError
+      end
+
       def validate_restore_target
         config.validate_database_restore_target(restore_target_identifier)
       end
 
+      def validate_local_restore_target
+        config.validate_local_database_restore_target(local_restore_target_identifier)
+      end
+
       def restore_target_identifier
+        raise NotImplementedError
+      end
+
+      def local_restore_target_identifier
         raise NotImplementedError
       end
 

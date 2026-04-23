@@ -1,3 +1,5 @@
+require "fileutils"
+require "tmpdir"
 require_relative "config"
 require_relative "databases/base"
 require_relative "databases/mysql"
@@ -66,6 +68,14 @@ module KamalBackup
       true
     end
 
+    def restore_local(snapshot = "latest")
+      config.validate_local_restore
+
+      restore_local_database(snapshot)
+      restore_local_files(snapshot)
+      true
+    end
+
     def snapshots
       config.validate_restic
       restic.snapshots.stdout
@@ -89,6 +99,50 @@ module KamalBackup
     private
       def current_timestamp
         Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
+      end
+
+      def restore_local_database(snapshot)
+        adapter = database
+        resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:database", "adapter:#{adapter.adapter_name}"])
+        filename = restic.database_file(resolved_snapshot, adapter.adapter_name)
+
+        if filename
+          adapter.restore_local(restic, resolved_snapshot, filename)
+        else
+          raise ConfigurationError, "could not find database backup file in snapshot #{resolved_snapshot}"
+        end
+      end
+
+      def restore_local_files(snapshot)
+        resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:files"])
+
+        Dir.mktmpdir("kamal-backup-restore-") do |stage_dir|
+          restic.restore_snapshot(resolved_snapshot, stage_dir)
+          replace_local_backup_paths(stage_dir)
+        end
+      end
+
+      def replace_local_backup_paths(stage_dir)
+        config.local_restore_path_pairs.each do |source_path, target_path|
+          replace_local_backup_path(stage_dir, source_path, target_path)
+        end
+      end
+
+      def replace_local_backup_path(stage_dir, source_path, target_path)
+        source = staged_backup_path(stage_dir, source_path)
+        target = File.expand_path(target_path)
+
+        if File.exist?(source)
+          FileUtils.rm_rf(target)
+          FileUtils.mkdir_p(File.dirname(target))
+          FileUtils.mv(source, target)
+        else
+          raise ConfigurationError, "restored file snapshot is missing #{source_path}"
+        end
+      end
+
+      def staged_backup_path(stage_dir, path)
+        File.join(stage_dir, path.to_s.sub(%r{\A/+}, ""))
       end
 
       def restic

@@ -53,6 +53,27 @@ class DatabaseAdaptersTest < Minitest::Test
     )
   end
 
+  def test_postgres_local_restore_uses_current_database_url
+    config = KamalBackup::Config.new(env: base_env(
+      "DATABASE_ADAPTER" => "postgres",
+      "DATABASE_URL" => "postgres://app:secret@db/app_development"
+    ))
+    adapter = KamalBackup::Databases::Postgres.new(config, redactor: redactor)
+    command = adapter.local_restore_command
+
+    assert_includes command.argv, "app_development"
+    refute_includes command.argv.join(" "), "secret"
+    assert_equal(
+      {
+        "PGHOST" => "db",
+        "PGUSER" => "app",
+        "PGPASSWORD" => "secret",
+        "PGDATABASE" => "app_development"
+      },
+      command.env
+    )
+  end
+
   def test_postgres_restore_target_identifier_keeps_url_for_exact_safety_check
     config = KamalBackup::Config.new(env: base_env(
       "DATABASE_ADAPTER" => "postgres",
@@ -99,6 +120,20 @@ class DatabaseAdaptersTest < Minitest::Test
     assert_equal({ "MYSQL_PWD" => "restore-secret" }, command.env)
   end
 
+  def test_mysql_local_restore_uses_current_database_url
+    config = KamalBackup::Config.new(env: base_env(
+      "DATABASE_ADAPTER" => "mysql",
+      "DATABASE_URL" => "mysql2://app:secret@mysql:3306/app_development",
+      "MYSQL_CLIENT_BIN" => "mysql"
+    ))
+    adapter = KamalBackup::Databases::Mysql.new(config, redactor: redactor)
+    command = adapter.local_restore_command
+
+    assert_equal "mysql", command.argv.first
+    assert_includes command.argv, "app_development"
+    assert_equal({ "MYSQL_PWD" => "secret" }, command.env)
+  end
+
   def test_sqlite_refuses_in_place_restore_without_flag
     Dir.mktmpdir do |dir|
       source = File.join(dir, "app.sqlite3")
@@ -113,6 +148,16 @@ class DatabaseAdaptersTest < Minitest::Test
       error = assert_raises(KamalBackup::ConfigurationError) { adapter.send(:validate_restore_target) }
       assert_match(/in-place SQLite restore/, error.message)
     end
+  end
+
+  def test_sqlite_local_restore_allows_restoring_back_into_the_current_database
+    config = KamalBackup::Config.new(env: base_env(
+      "DATABASE_ADAPTER" => "sqlite",
+      "SQLITE_DATABASE_PATH" => "/tmp/app_development.sqlite3"
+    ))
+    adapter = KamalBackup::Databases::Sqlite.new(config, redactor: redactor)
+
+    adapter.send(:validate_local_restore_target)
   end
 
   def test_sqlite_literal_escapes_single_quotes

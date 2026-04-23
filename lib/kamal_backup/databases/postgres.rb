@@ -38,7 +38,7 @@ module KamalBackup
 
       def dump_command
         argv = %w[pg_dump --format=custom --no-owner --no-privileges]
-        CommandSpec.new(argv: argv, env: backup_env)
+        CommandSpec.new(argv: argv, env: current_connection)
       end
 
       def restore_command
@@ -50,16 +50,32 @@ module KamalBackup
         CommandSpec.new(argv: argv, env: connection)
       end
 
+      def local_restore_command
+        connection = current_connection
+        database = connection.fetch("PGDATABASE")
+
+        argv = %w[pg_restore --clean --if-exists --no-owner --no-privileges --dbname]
+        argv << database
+        CommandSpec.new(argv: argv, env: connection)
+      end
+
       def restore_target_identifier
         value("RESTORE_DATABASE_URL") || value("RESTORE_PGDATABASE")
       end
 
+      def local_restore_target_identifier
+        value("DATABASE_URL") || value("PGDATABASE")
+      end
+
       private
-        def backup_env
+        def current_connection
           if value("DATABASE_URL")
             connection_from_url(value("DATABASE_URL"), "DATABASE_URL")
           else
-            prefixed_env("", SOURCE_ENV_KEYS)
+            connection = prefixed_env("", SOURCE_ENV_KEYS)
+            raise ConfigurationError, "DATABASE_URL or PGDATABASE is required for PostgreSQL local restore" unless connection["PGDATABASE"]
+
+            connection
           end
         end
 

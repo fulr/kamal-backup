@@ -36,5 +36,6 @@ class CLITest < Minitest::Test
     assert_includes out, "kamal-backup help [COMMAND]"
     assert_includes out, "kamal-backup backup"
     assert_includes out, "kamal-backup restore-db [SNAPSHOT]"
+    assert_includes out, "kamal-backup restore-local [SNAPSHOT]"
   end
 end

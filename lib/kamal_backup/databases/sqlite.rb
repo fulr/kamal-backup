@@ -34,6 +34,11 @@ module KamalBackup
         restic.write_dump_to_path(snapshot, filename, restore_target)
       end
 
+      def restore_local(restic, snapshot, filename)
+        validate_local_restore_target
+        restic.write_dump_to_path(snapshot, filename, sqlite_source)
+      end
+
       def dump_command
         raise NotImplementedError, "SQLite backup uses .backup into a temporary file"
       end
@@ -44,6 +49,10 @@ module KamalBackup
 
       def restore_target_identifier
         restore_target
+      end
+
+      def local_restore_target_identifier
+        sqlite_source
       end
 
       private
@@ -63,6 +72,10 @@ module KamalBackup
           end
 
           super
+        end
+
+        def validate_local_restore_target
+          config.validate_local_database_restore_target(local_restore_target_identifier)
         end
 
         def sqlite_literal(value)

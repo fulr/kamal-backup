@@ -56,6 +56,37 @@ class ConfigTest < Minitest::Test
     assert_match(/production-looking/, error.message)
   end
 
+  def test_local_restore_refuses_production_environment_without_override
+    config = KamalBackup::Config.new(env: base_env(
+      "BACKUP_PATHS" => "/tmp/storage",
+      "KAMAL_BACKUP_ALLOW_RESTORE" => "true",
+      "RAILS_ENV" => "production"
+    ))
+
+    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_local_restore }
+    assert_match(/restore-local refuses to run with RAILS_ENV=production/, error.message)
+  end
+
+  def test_local_restore_accepts_missing_target_paths
+    config = KamalBackup::Config.new(env: base_env(
+      "BACKUP_PATHS" => "/tmp/storage",
+      "KAMAL_BACKUP_ALLOW_RESTORE" => "true"
+    ))
+
+    config.validate_local_restore
+  end
+
+  def test_local_restore_source_paths_must_match_target_path_count
+    config = KamalBackup::Config.new(env: base_env(
+      "BACKUP_PATHS" => "/tmp/storage:/tmp/uploads",
+      "LOCAL_RESTORE_SOURCE_PATHS" => "/data/storage",
+      "KAMAL_BACKUP_ALLOW_RESTORE" => "true"
+    ))
+
+    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_local_restore }
+    assert_match(/LOCAL_RESTORE_SOURCE_PATHS must contain the same number of paths as BACKUP_PATHS/, error.message)
+  end
+
   def test_retention_args_use_restic_flags
     config = KamalBackup::Config.new(env: base_env("RESTIC_KEEP_LAST" => "3", "RESTIC_KEEP_DAILY" => "0"))
 

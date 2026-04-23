@@ -46,6 +46,7 @@ If your Rails app already stores Active Storage blobs directly in S3, there may 
 - `evidence`: Print a redacted JSON summary with current backup settings, latest snapshots, latest check result, and tool versions. This is meant to be attached to internal ops records or security reviews.
 - `restore-db`: Restore a database backup into an explicitly configured restore target.
 - `restore-files`: Restore a file snapshot into a target directory, usually `/restore/files`.
+- `restore-local`: Restore the latest database and file snapshots into the current local development database and file paths.
 
 ## Snapshot tags
 

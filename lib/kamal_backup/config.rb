@@ -84,8 +84,26 @@ module KamalBackup
     end
 
     def backup_paths
-      raw = value("BACKUP_PATHS").to_s
-      raw.split(/[\n:]+/).map(&:strip).reject(&:empty?)
+      split_paths(value("BACKUP_PATHS"))
+    end
+
+    def local_restore_source_paths
+      if raw = value("LOCAL_RESTORE_SOURCE_PATHS")
+        split_paths(raw)
+      else
+        backup_paths
+      end
+    end
+
+    def local_restore_path_pairs
+      source_paths = local_restore_source_paths
+      target_paths = backup_paths
+
+      if source_paths.size == target_paths.size
+        source_paths.zip(target_paths)
+      else
+        raise ConfigurationError, "LOCAL_RESTORE_SOURCE_PATHS must contain the same number of paths as BACKUP_PATHS"
+      end
     end
 
     def backup_path_label(path)
@@ -135,6 +153,13 @@ module KamalBackup
       validate_backup_paths
     end
 
+    def validate_local_restore
+      validate_restic
+      validate_restore_allowed
+      validate_local_restore_environment
+      validate_local_restore_paths
+    end
+
     def validate_database_backup
       case database_adapter
       when "postgres"
@@ -169,6 +194,14 @@ module KamalBackup
     def validate_restore_allowed
       unless allow_restore?
         raise ConfigurationError, "restore commands require KAMAL_BACKUP_ALLOW_RESTORE=true"
+      end
+    end
+
+    def validate_local_database_restore_target(target)
+      raise ConfigurationError, "local restore database target is required" if target.to_s.strip.empty?
+
+      if production_named_target?(target) && !allow_production_restore?
+        raise ConfigurationError, "refusing production-looking local restore target #{target}; set KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true to override"
       end
     end
 
@@ -224,6 +257,28 @@ module KamalBackup
     end
 
     private
+      def validate_local_restore_environment
+        if environment = local_restore_environment
+          key, value = environment
+
+          if production_environment?(value) && !allow_production_restore?
+            raise ConfigurationError, "restore-local refuses to run with #{key}=#{value}; set KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true to override"
+          end
+        end
+      end
+
+      def validate_local_restore_paths
+        path_pairs = local_restore_path_pairs
+        raise ConfigurationError, "BACKUP_PATHS must contain at least one path" if path_pairs.empty?
+
+        path_pairs.each do |_source_path, target_path|
+          expanded = File.expand_path(target_path)
+          if SUSPICIOUS_BACKUP_PATHS.include?(expanded) && !allow_suspicious_backup_paths?
+            raise ConfigurationError, "refusing suspicious local restore path #{expanded}; set KAMAL_BACKUP_ALLOW_SUSPICIOUS_PATHS=true to override"
+          end
+        end
+      end
+
       def integer(key, default, minimum:)
         raw = value(key)
         number = raw ? Integer(raw) : default
@@ -270,6 +325,22 @@ module KamalBackup
           value("MYSQL_DATABASE"),
           value("MARIADB_DATABASE")
         ].compact
+      end
+
+      def split_paths(raw)
+        raw.to_s.split(/[\n:]+/).map(&:strip).reject(&:empty?)
+      end
+
+      def local_restore_environment
+        %w[RAILS_ENV RACK_ENV APP_ENV KAMAL_ENVIRONMENT].each do |key|
+          if value(key)
+            return [key, value(key)]
+          end
+        end
+      end
+
+      def production_environment?(value)
+        %w[production prod live].include?(value.to_s.downcase)
       end
 
       def production_named_target?(target)

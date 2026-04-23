@@ -22,6 +22,20 @@ When you run a drill, record:
 
 That note matters almost as much as the command output when you later need to explain your process to a reviewer.
 
+## Local development restore
+
+For a small Rails app, the quickest restore drill is often the local development machine:
+
+```sh
+KAMAL_BACKUP_ALLOW_RESTORE=true bundle exec exe/kamal-backup restore-local
+```
+
+`restore-local` restores the latest database snapshot into the current `DATABASE_URL` or `SQLITE_DATABASE_PATH`, and restores the latest file snapshot back into the current `BACKUP_PATHS`. If the production file path differs from the local file path, set `LOCAL_RESTORE_SOURCE_PATHS` to the production path list and keep `BACKUP_PATHS` pointed at the local targets. It refuses to run when `RAILS_ENV`, `RACK_ENV`, `APP_ENV`, or `KAMAL_ENVIRONMENT` is set to `production` unless you explicitly override that safety check.
+
+That is useful when you want a fast answer to "can we really bring this app back?" without provisioning extra infrastructure.
+
+For larger apps, treat `restore-local` as a developer convenience, not the main drill. Run the production-adjacent drill below against a scratch database and scratch file path that look more like the real deployment.
+
 ## Database restores
 
 Database restores use restore-specific environment by default. They do not restore into `DATABASE_URL`.

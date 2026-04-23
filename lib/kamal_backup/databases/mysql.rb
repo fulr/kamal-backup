@@ -13,7 +13,7 @@ module KamalBackup
       end
 
       def dump_command
-        connection = backup_connection
+        connection = current_connection
         argv = [
           dump_binary,
           "--single-transaction",
@@ -33,8 +33,20 @@ module KamalBackup
         CommandSpec.new(argv: argv, env: password_env(connection))
       end
 
+      def local_restore_command
+        connection = current_connection
+        argv = [client_binary] + connection_args(connection)
+        argv << connection.fetch(:database)
+        CommandSpec.new(argv: argv, env: password_env(connection))
+      end
+
       def restore_target_identifier
         connection = restore_connection
+        [connection[:host], connection[:database]].compact.join("/")
+      end
+
+      def local_restore_target_identifier
+        connection = current_connection
         [connection[:host], connection[:database]].compact.join("/")
       end
 
@@ -47,7 +59,7 @@ module KamalBackup
           value("MYSQL_CLIENT_BIN") || (executable_available?("mariadb") ? "mariadb" : "mysql")
         end
 
-        def backup_connection
+        def current_connection
           if value("DATABASE_URL")
             parse_url(value("DATABASE_URL"))
           else

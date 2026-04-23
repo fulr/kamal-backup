@@ -13,6 +13,9 @@ class AppTest < Minitest::Test
       @forget_calls = 0
       @latest_snapshot_calls = []
       @restore_snapshot_calls = []
+      @database_snapshot = "latest-database-snapshot"
+      @files_snapshot = "latest-files-snapshot"
+      @staged_files = {}
     end
 
     def ensure_repository
@@ -32,9 +35,16 @@ class AppTest < Minitest::Test
       KamalBackup::CommandResult.new(stdout: "checked", stderr: "", status: 0)
     end
 
+    attr_writer :database_snapshot, :files_snapshot
+
     def latest_snapshot(tags:)
       @latest_snapshot_calls << tags
-      { "short_id" => "latest-snapshot" }
+
+      if tags.include?("type:database")
+        { "short_id" => @database_snapshot }
+      else
+        { "short_id" => @files_snapshot }
+      end
     end
 
     def database_file(snapshot, adapter)
@@ -42,18 +52,30 @@ class AppTest < Minitest::Test
       "database.dump"
     end
 
+    def stage_file(snapshot, path, content)
+      @staged_files[snapshot] ||= []
+      @staged_files[snapshot] << { path: path, content: content }
+    end
+
     def restore_snapshot(snapshot, target)
       @restore_snapshot_calls << { snapshot: snapshot, target: target }
+
+      Array(@staged_files[snapshot]).each do |entry|
+        path = File.join(target, entry.fetch(:path).sub(%r{\A/+}, ""))
+        FileUtils.mkdir_p(File.dirname(path))
+        File.write(path, entry.fetch(:content))
+      end
     end
   end
 
   class FakeDatabase
-    attr_reader :backup_calls, :restore_calls
+    attr_reader :backup_calls, :restore_calls, :local_restore_calls
 
     def initialize(adapter_name: "sqlite")
       @adapter_name = adapter_name
       @backup_calls = []
       @restore_calls = []
+      @local_restore_calls = []
     end
 
     def adapter_name
@@ -66,6 +88,10 @@ class AppTest < Minitest::Test
 
     def restore(restic, snapshot, filename)
       @restore_calls << { restic: restic, snapshot: snapshot, filename: filename }
+    end
+
+    def restore_local(restic, snapshot, filename)
+      @local_restore_calls << { restic: restic, snapshot: snapshot, filename: filename }
     end
   end
 
@@ -167,9 +193,9 @@ class AppTest < Minitest::Test
     app.restore_database("latest")
 
     assert_equal [%w[type:database adapter:postgres]], restic.latest_snapshot_calls
-    assert_equal [{ snapshot: "latest-snapshot", adapter: "postgres" }], restic.database_file_calls
+    assert_equal [{ snapshot: "latest-database-snapshot", adapter: "postgres" }], restic.database_file_calls
     assert_equal 1, database.restore_calls.size
-    assert_equal "latest-snapshot", database.restore_calls.first.fetch(:snapshot)
+    assert_equal "latest-database-snapshot", database.restore_calls.first.fetch(:snapshot)
     assert_equal "database.dump", database.restore_calls.first.fetch(:filename)
   end
 
@@ -192,7 +218,43 @@ class AppTest < Minitest::Test
       app.restore_files("latest", target: target)
 
       assert_equal [%w[type:files]], restic.latest_snapshot_calls
-      assert_equal [{ snapshot: "latest-snapshot", target: File.expand_path(target) }], restic.restore_snapshot_calls
+      assert_equal [{ snapshot: "latest-files-snapshot", target: File.expand_path(target) }], restic.restore_snapshot_calls
+    end
+  end
+
+  def test_restore_local_restores_database_and_replaces_backup_paths
+    Dir.mktmpdir do |dir|
+      source_files = "/data/storage"
+      files = File.join(dir, "storage")
+      old_file = File.join(files, "old.txt")
+      FileUtils.mkdir_p(files)
+      File.write(old_file, "stale")
+
+      restic = FakeRestic.new
+      restic.stage_file("latest-files-snapshot", File.join(source_files, "hello.txt"), "hello from backup")
+      database = FakeDatabase.new(adapter_name: "sqlite")
+
+      app = KamalBackup::App.new(
+        env: base_env(
+          "BACKUP_PATHS" => files,
+          "LOCAL_RESTORE_SOURCE_PATHS" => source_files,
+          "KAMAL_BACKUP_ALLOW_RESTORE" => "true"
+        ),
+        restic: restic,
+        database: database
+      )
+
+      app.restore_local("latest")
+
+      assert_equal [%w[type:database adapter:sqlite], %w[type:files]], restic.latest_snapshot_calls
+      assert_equal [{ snapshot: "latest-database-snapshot", adapter: "sqlite" }], restic.database_file_calls
+      assert_equal 1, database.local_restore_calls.size
+      assert_equal "latest-database-snapshot", database.local_restore_calls.first.fetch(:snapshot)
+      assert_equal 1, restic.restore_snapshot_calls.size
+      assert_equal "latest-files-snapshot", restic.restore_snapshot_calls.first.fetch(:snapshot)
+      refute_equal File.expand_path(files), restic.restore_snapshot_calls.first.fetch(:target)
+      assert_equal "hello from backup", File.read(File.join(files, "hello.txt"))
+      refute File.exist?(old_file)
     end
   end
 end
