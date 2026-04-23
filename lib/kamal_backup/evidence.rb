@@ -23,6 +23,7 @@ module KamalBackup
         latest_database_backup: latest_snapshot_summary(["type:database"]),
         latest_file_backup: latest_snapshot_summary(["type:files"]),
         last_restic_check: last_check,
+        last_restore_drill: last_restore_drill,
         image_version: VERSION,
         tool_versions: tool_versions
       }
@@ -50,6 +51,14 @@ module KamalBackup
       def last_check
         if File.file?(@config.last_check_path)
           JSON.parse(File.read(@config.last_check_path))
+        end
+      rescue JSON::ParserError, SystemCallError => e
+        { error: @redactor.redact_string(e.message) }
+      end
+
+      def last_restore_drill
+        if File.file?(@config.last_restore_drill_path)
+          JSON.parse(File.read(@config.last_restore_drill_path))
         end
       rescue JSON::ParserError, SystemCallError => e
         { error: @redactor.redact_string(e.message) }

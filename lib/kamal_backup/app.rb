@@ -1,5 +1,8 @@
 require "fileutils"
+require "json"
+require "time"
 require "tmpdir"
+require_relative "command"
 require_relative "config"
 require_relative "databases/base"
 require_relative "databases/mysql"
@@ -46,33 +49,70 @@ module KamalBackup
       config.validate_restic
       config.validate_restore_allowed
 
-      adapter = database
-      resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:database", "adapter:#{adapter.adapter_name}"])
-      filename = restic.database_file(resolved_snapshot, adapter.adapter_name)
-
-      if filename
-        adapter.restore(restic, resolved_snapshot, filename)
-        true
-      else
-        raise ConfigurationError, "could not find database backup file in snapshot #{resolved_snapshot}"
-      end
+      perform_database_restore(snapshot)
+      true
     end
 
     def restore_files(snapshot = "latest", target: "/restore/files")
       config.validate_restic
       config.validate_restore_allowed
 
-      resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:files"])
-      validated_target = config.validate_file_restore_target(target)
-      restic.restore_snapshot(resolved_snapshot, validated_target)
+      perform_file_restore(snapshot, target: target)
       true
     end
 
     def restore_local(snapshot = "latest")
       config.validate_local_restore
 
-      restore_local_database(snapshot)
-      restore_local_files(snapshot)
+      perform_database_restore(snapshot, local: true)
+      perform_local_file_restore(snapshot)
+      true
+    end
+
+    def drill(snapshot = "latest", local: false, check_command: nil, file_target: "/restore/files")
+      started_at = Time.now.utc
+      result = {
+        status: "ok",
+        mode: local ? "local" : "targeted",
+        operator: drill_operator,
+        requested_snapshot: snapshot,
+        started_at: started_at.iso8601
+      }
+
+      begin
+        if local
+          config.validate_local_restore
+          result[:database] = perform_database_restore(snapshot, local: true)
+          result[:files] = perform_local_file_restore(snapshot)
+        else
+          config.validate_restic
+          config.validate_restore_allowed
+          result[:database] = perform_database_restore(snapshot)
+          result[:files] = perform_file_restore(snapshot, target: file_target)
+        end
+
+        if check_command
+          result[:check] = run_drill_check(check_command)
+
+          if result[:check][:status] == "failed"
+            result[:status] = "failed"
+            result[:error] = result[:check][:error]
+          end
+        end
+      rescue StandardError => e
+        result[:status] = "failed"
+        result[:error] = redactor.redact_string(e.message)
+      ensure
+        result[:finished_at] = Time.now.utc.iso8601
+        write_last_restore_drill(result)
+      end
+
+      result
+    end
+
+    def drill_failed?(result)
+      result.fetch(:status) != "ok"
+    rescue KeyError
       true
     end
 
@@ -101,25 +141,52 @@ module KamalBackup
         Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
       end
 
-      def restore_local_database(snapshot)
+      def perform_database_restore(snapshot, local: false)
         adapter = database
         resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:database", "adapter:#{adapter.adapter_name}"])
         filename = restic.database_file(resolved_snapshot, adapter.adapter_name)
 
         if filename
-          adapter.restore_local(restic, resolved_snapshot, filename)
+          if local
+            adapter.restore_local(restic, resolved_snapshot, filename)
+          else
+            adapter.restore(restic, resolved_snapshot, filename)
+          end
+
+          {
+            snapshot: resolved_snapshot,
+            adapter: adapter.adapter_name,
+            filename: filename,
+            target: restore_database_target(adapter, local: local)
+          }
         else
           raise ConfigurationError, "could not find database backup file in snapshot #{resolved_snapshot}"
         end
       end
 
-      def restore_local_files(snapshot)
+      def perform_file_restore(snapshot, target:)
         resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:files"])
+        validated_target = config.validate_file_restore_target(target)
+        restic.restore_snapshot(resolved_snapshot, validated_target)
 
+        {
+          snapshot: resolved_snapshot,
+          target: validated_target
+        }
+      end
+
+      def perform_local_file_restore(snapshot)
+        resolved_snapshot = resolve_snapshot(snapshot, tags: ["type:files"])
         Dir.mktmpdir("kamal-backup-restore-") do |stage_dir|
           restic.restore_snapshot(resolved_snapshot, stage_dir)
           replace_local_backup_paths(stage_dir)
         end
+
+        {
+          snapshot: resolved_snapshot,
+          source_paths: config.local_restore_source_paths,
+          target_paths: config.backup_paths
+        }
       end
 
       def replace_local_backup_paths(stage_dir)
@@ -143,6 +210,47 @@ module KamalBackup
 
       def staged_backup_path(stage_dir, path)
         File.join(stage_dir, path.to_s.sub(%r{\A/+}, ""))
+      end
+
+      def restore_database_target(adapter, local:)
+        target = if local
+          adapter.local_restore_target_identifier
+        else
+          adapter.restore_target_identifier
+        end
+
+        redactor.redact_string(target.to_s)
+      end
+
+      def run_drill_check(command)
+        result = Command.capture(
+          CommandSpec.new(argv: ["sh", "-lc", command]),
+          redactor: redactor
+        )
+        output = result.stdout.empty? ? result.stderr : result.stdout
+
+        {
+          status: "ok",
+          command: redactor.redact_string(command),
+          output: redactor.redact_string(output.strip)
+        }
+      rescue CommandError => e
+        {
+          status: "failed",
+          command: redactor.redact_string(command),
+          error: redactor.redact_string(e.message)
+        }
+      end
+
+      def write_last_restore_drill(payload)
+        FileUtils.mkdir_p(config.state_dir)
+        File.write(config.last_restore_drill_path, JSON.pretty_generate(payload))
+      rescue SystemCallError
+        nil
+      end
+
+      def drill_operator
+        config.value("USER") || config.value("USERNAME")
       end
 
       def restic

@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require "json"
 
 class AppTest < Minitest::Test
   class FakeRestic
@@ -92,6 +93,14 @@ class AppTest < Minitest::Test
 
     def restore_local(restic, snapshot, filename)
       @local_restore_calls << { restic: restic, snapshot: snapshot, filename: filename }
+    end
+
+    def restore_target_identifier
+      "postgres://restore@example.test/app_restore"
+    end
+
+    def local_restore_target_identifier
+      "/tmp/app_development.sqlite3"
     end
   end
 
@@ -255,6 +264,71 @@ class AppTest < Minitest::Test
       refute_equal File.expand_path(files), restic.restore_snapshot_calls.first.fetch(:target)
       assert_equal "hello from backup", File.read(File.join(files, "hello.txt"))
       refute File.exist?(old_file)
+    end
+  end
+
+  def test_drill_run_restores_explicit_targets_and_records_success
+    Dir.mktmpdir do |dir|
+      target = File.join(dir, "restored-files")
+      state = File.join(dir, "state")
+      restic = FakeRestic.new
+      database = FakeDatabase.new(adapter_name: "postgres")
+
+      app = KamalBackup::App.new(
+        env: base_env(
+          "KAMAL_BACKUP_ALLOW_RESTORE" => "true",
+          "KAMAL_BACKUP_STATE_DIR" => state
+        ),
+        restic: restic,
+        database: database
+      )
+
+      result = app.drill("latest", file_target: target, check_command: "printf verified")
+
+      assert_equal "ok", result.fetch(:status)
+      assert_equal "targeted", result.fetch(:mode)
+      assert_equal "latest-database-snapshot", result.fetch(:database).fetch(:snapshot)
+      assert_equal "postgres", result.fetch(:database).fetch(:adapter)
+      assert_equal File.expand_path(target), result.fetch(:files).fetch(:target)
+      assert_equal "ok", result.fetch(:check).fetch(:status)
+      assert_equal "verified", result.fetch(:check).fetch(:output)
+      assert_equal 1, database.restore_calls.size
+      assert_equal 0, database.local_restore_calls.size
+      assert File.file?(File.join(state, "last_restore_drill.json"))
+    end
+  end
+
+  def test_drill_run_marks_failed_checks_and_persists_the_result
+    Dir.mktmpdir do |dir|
+      source_files = "/data/storage"
+      files = File.join(dir, "storage")
+      state = File.join(dir, "state")
+      FileUtils.mkdir_p(files)
+
+      restic = FakeRestic.new
+      restic.stage_file("latest-files-snapshot", File.join(source_files, "hello.txt"), "hello from backup")
+      database = FakeDatabase.new(adapter_name: "sqlite")
+
+      app = KamalBackup::App.new(
+        env: base_env(
+          "BACKUP_PATHS" => files,
+          "LOCAL_RESTORE_SOURCE_PATHS" => source_files,
+          "KAMAL_BACKUP_ALLOW_RESTORE" => "true",
+          "KAMAL_BACKUP_STATE_DIR" => state
+        ),
+        restic: restic,
+        database: database
+      )
+
+      result = app.drill("latest", local: true, check_command: "exit 1")
+      persisted = JSON.parse(File.read(File.join(state, "last_restore_drill.json")))
+
+      assert_equal "failed", result.fetch(:status)
+      assert_equal "local", result.fetch(:mode)
+      assert_equal "failed", result.fetch(:check).fetch(:status)
+      assert_includes result.fetch(:error), "command failed"
+      assert_equal "failed", persisted.fetch("status")
+      assert_equal "failed", persisted.fetch("check").fetch("status")
     end
   end
 end

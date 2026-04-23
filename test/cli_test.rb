@@ -35,7 +35,59 @@ class CLITest < Minitest::Test
 
     assert_includes out, "kamal-backup help [COMMAND]"
     assert_includes out, "kamal-backup backup"
+    assert_includes out, "kamal-backup drill [SNAPSHOT]"
     assert_includes out, "kamal-backup restore-db [SNAPSHOT]"
     assert_includes out, "kamal-backup restore-local [SNAPSHOT]"
+  end
+
+  def test_drill_prints_json_output
+    fake = Object.new
+    def fake.drill(*, **)
+      { status: "ok", mode: "local" }
+    end
+
+    def fake.drill_failed?(result)
+      result.fetch(:status) != "ok"
+    end
+
+    out, _ = capture_io do
+      original_new = KamalBackup::App.method(:new)
+      begin
+        KamalBackup::App.define_singleton_method(:new) { |**| fake }
+        KamalBackup::CLI.start(["drill", "--local"], env: base_env)
+      ensure
+        KamalBackup::App.define_singleton_method(:new) { |**kwargs| original_new.call(**kwargs) }
+      end
+    end
+
+    assert_includes out, "\"status\": \"ok\""
+    assert_includes out, "\"mode\": \"local\""
+  end
+
+  def test_drill_exits_non_zero_when_the_drill_failed
+    fake = Object.new
+    def fake.drill(*, **)
+      { status: "failed", error: "restore failed" }
+    end
+
+    def fake.drill_failed?(result)
+      result.fetch(:status) != "ok"
+    end
+
+    out, _ = capture_io do
+      original_new = KamalBackup::App.method(:new)
+      begin
+        KamalBackup::App.define_singleton_method(:new) { |**| fake }
+        error = assert_raises(SystemExit) do
+          KamalBackup::CLI.start(["drill"], env: base_env)
+        end
+        assert_equal 1, error.status
+      ensure
+        KamalBackup::App.define_singleton_method(:new) { |**kwargs| original_new.call(**kwargs) }
+      end
+    end
+
+    assert_includes out, "\"status\": \"failed\""
+    assert_includes out, "\"error\": \"restore failed\""
   end
 end

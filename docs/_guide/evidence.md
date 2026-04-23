@@ -30,6 +30,7 @@ The JSON includes:
 - retention policy
 - latest database and file snapshots
 - last tracked `restic check` result
+- last tracked restore drill result
 - image version
 - installed tool versions
 
@@ -43,8 +44,8 @@ A practical workflow looks like this:
 
 1. Run backups on a schedule.
 2. Run `kamal-backup check` on a schedule, or enable `RESTIC_CHECK_AFTER_BACKUP=true`.
-3. Run restore drills against a non-production target.
-4. Capture the result of the restore drill in a short human note:
+3. Run `kamal-backup drill` against a non-production target.
+4. Keep a short human note when you want operator context beyond the drill JSON:
    date, operator, snapshot restored, target used, and whether the app data looked correct.
 5. Run `kamal-backup evidence` and include the JSON with the review packet.
 
@@ -70,7 +71,7 @@ RESTIC_CHECK_AFTER_BACKUP=true
 RESTIC_CHECK_READ_DATA_SUBSET=5%
 ```
 
-The latest check result is stored under `KAMAL_BACKUP_STATE_DIR` and included in evidence output when available.
+The latest check result is stored under `KAMAL_BACKUP_STATE_DIR` and included in evidence output when available. The latest restore drill result is stored there too.
 
 ## What reviewers usually want to hear
 

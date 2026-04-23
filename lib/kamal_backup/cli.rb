@@ -1,3 +1,4 @@
+require "json"
 require "thor"
 require_relative "app"
 require_relative "redactor"
@@ -56,6 +57,22 @@ module KamalBackup
     desc "restore-local [SNAPSHOT]", "Restore database and files into the current local environment"
     def restore_local(snapshot = "latest")
       app.restore_local(snapshot)
+    end
+
+    desc "drill [SNAPSHOT]", "Run a restore drill and record the result"
+    method_option :local, type: :boolean, default: false, desc: "Restore into the current local database and file paths"
+    method_option :check, type: :string, desc: "Run a verification command after the restore"
+    method_option :"file-target", type: :string, default: "/restore/files", desc: "File restore target for non-local drills"
+    def drill(snapshot = "latest")
+      result = app.drill(
+        snapshot,
+        local: options[:local],
+        check_command: options[:check],
+        file_target: options[:"file-target"]
+      )
+
+      puts(JSON.pretty_generate(result))
+      exit(1) if app.drill_failed?(result)
     end
 
     desc "list", "List matching restic snapshots"
