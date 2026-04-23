@@ -25,25 +25,39 @@ module KamalBackup
   CommandResult = Struct.new(:stdout, :stderr, :status, keyword_init: true)
 
   class Command
-    def self.capture(spec, input: nil, redactor:)
-      stdout, stderr, status = Open3.capture3(spec.env, *spec.argv, stdin_data: input)
-      result = CommandResult.new(stdout: stdout, stderr: stderr, status: status.exitstatus)
-      return result if status.success?
+    class << self
+      def capture(spec, input: nil, redactor:)
+        stdout, stderr, status = Open3.capture3(spec.env, *spec.argv, stdin_data: input)
+        result = CommandResult.new(stdout: stdout, stderr: stderr, status: status.exitstatus)
 
-      raise CommandError.new(
-        "command failed (#{status.exitstatus}): #{spec.display(redactor)}\n#{redactor.redact_string(stderr)}",
-        command: spec,
-        status: status.exitstatus,
-        stdout: redactor.redact_string(stdout),
-        stderr: redactor.redact_string(stderr)
-      )
-    rescue Errno::ENOENT => e
-      raise CommandError.new(
-        "command not found: #{spec.argv.first}",
-        command: spec,
-        status: 127,
-        stderr: e.message
-      )
+        if status.success?
+          result
+        else
+          raise command_failure(spec, status.exitstatus, stdout, stderr, redactor)
+        end
+      rescue Errno::ENOENT => e
+        raise command_not_found(spec, e)
+      end
+
+      private
+        def command_failure(spec, status, stdout, stderr, redactor)
+          CommandError.new(
+            "command failed (#{status}): #{spec.display(redactor)}\n#{redactor.redact_string(stderr)}",
+            command: spec,
+            status: status,
+            stdout: redactor.redact_string(stdout),
+            stderr: redactor.redact_string(stderr)
+          )
+        end
+
+        def command_not_found(spec, error)
+          CommandError.new(
+            "command not found: #{spec.argv.first}",
+            command: spec,
+            status: 127,
+            stderr: error.message
+          )
+        end
     end
   end
 end

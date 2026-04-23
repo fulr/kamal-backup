@@ -14,6 +14,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
+COPY Gemfile Gemfile.lock ./
+
+RUN bundle config set without "test" \
+  && bundle install
+
 COPY README.md LICENSE ./
 COPY exe ./exe
 COPY lib ./lib

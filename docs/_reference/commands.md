@@ -44,6 +44,8 @@ kamal-backup schedule
 kamal-backup version
 ```
 
+Use `kamal-backup help [command]` for task-specific usage.
+
 ## Commands
 
 | Command | Description |

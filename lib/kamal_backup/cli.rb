@@ -1,156 +1,83 @@
-require "json"
-require "optparse"
-require "time"
-require_relative "config"
-require_relative "databases/postgres"
-require_relative "databases/mysql"
-require_relative "databases/sqlite"
-require_relative "evidence"
+require "thor"
+require_relative "app"
 require_relative "redactor"
-require_relative "restic"
-require_relative "scheduler"
 require_relative "version"
 
 module KamalBackup
-  class CLI
-    HELP = <<~TEXT
-      Usage:
-        kamal-backup backup
-        kamal-backup restore-db [snapshot-or-latest]
-        kamal-backup restore-files [snapshot-or-latest] [target-dir]
-        kamal-backup list
-        kamal-backup check
-        kamal-backup evidence
-        kamal-backup schedule
-        kamal-backup version
+  class CLI < Thor
+    class << self
+      attr_accessor :command_env
+    end
 
-      Environment is used for configuration. See README.md for Kamal accessory examples.
-    TEXT
+    package_name "kamal-backup"
+    map %w[-v --version] => :version
+    map "restore-db" => :restore_database
+    map "restore-files" => :restore_files
+    remove_command :tree
+
+    def self.basename
+      "kamal-backup"
+    end
 
     def self.start(argv = ARGV, env: ENV)
-      new(env: env).run(argv)
+      self.command_env = env
+      super(argv)
     rescue Error => e
       warn("kamal-backup: #{Redactor.new(env: env).redact_string(e.message)}")
       exit(1)
     rescue Interrupt
       warn("kamal-backup: interrupted")
       exit(130)
+    ensure
+      self.command_env = nil
     end
 
-    def initialize(env: ENV)
-      @config = Config.new(env: env)
-      @redactor = Redactor.new(env: env)
+    def initialize(args = [], local_options = {}, config = {})
+      super
+      @app = App.new(env: self.class.command_env || ENV)
     end
 
-    def run(argv)
-      argv = argv.dup
-      command = argv.shift
-      return puts(HELP) if command.nil? || %w[-h --help help].include?(command)
-      return puts(VERSION) if %w[-v --version version].include?(command)
-
-      case command
-      when "backup"
-        backup
-      when "restore-db"
-        restore_db(argv[0] || "latest")
-      when "restore-files"
-        restore_files(argv[0] || "latest", argv[1] || "/restore/files")
-      when "list"
-        list
-      when "check"
-        check
-      when "evidence"
-        evidence
-      when "schedule"
-        schedule
-      else
-        raise ConfigurationError, "unknown command: #{command}\n\n#{HELP}"
-      end
-    end
-
+    desc "backup", "Run one backup immediately"
     def backup
-      @config.validate_for_backup!
-      timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
-      restic.ensure_repository!
-      database.backup(restic, timestamp)
-      restic.backup_paths(@config.backup_paths, tags: ["type:files", "run:#{timestamp}"])
-      restic.forget_after_success! if @config.forget_after_backup?
-      restic.check! if @config.check_after_backup?
-      true
+      app.backup
     end
 
-    def restore_db(snapshot)
-      @config.validate_for_restic!
-      @config.validate_restore_allowed!
-      adapter = database
-      resolved_snapshot = resolve_snapshot(snapshot, ["type:database", "adapter:#{adapter.adapter_name}"])
-      filename = restic.database_file(resolved_snapshot, adapter.adapter_name)
-      raise ConfigurationError, "could not find database backup file in snapshot #{resolved_snapshot}" unless filename
-
-      adapter.restore(restic, resolved_snapshot, filename)
-      true
+    desc "restore-db [SNAPSHOT]", "Restore a database dump"
+    def restore_database(snapshot = "latest")
+      app.restore_database(snapshot)
     end
 
-    def restore_files(snapshot, target)
-      @config.validate_for_restic!
-      @config.validate_restore_allowed!
-      target = @config.validate_file_restore_target!(target)
-      resolved_snapshot = resolve_snapshot(snapshot, ["type:files"])
-      restic.restore_snapshot(resolved_snapshot, target)
-      true
+    desc "restore-files [SNAPSHOT] [TARGET_DIR]", "Restore backed up files into a target directory"
+    def restore_files(snapshot = "latest", target_dir = "/restore/files")
+      app.restore_files(snapshot, target: target_dir)
     end
 
+    desc "list", "List matching restic snapshots"
     def list
-      @config.validate_for_restic!
-      puts restic.snapshots.stdout
-      true
+      puts(app.snapshots)
     end
 
+    desc "check", "Run restic check and record the latest result"
     def check
-      @config.validate_for_restic!
-      puts restic.check!.stdout
-      true
+      puts(app.check)
     end
 
+    desc "evidence", "Print redacted operational evidence as JSON"
     def evidence
-      @config.validate_for_restic!
-      puts Evidence.new(@config, restic: restic, redactor: @redactor).to_json
-      true
+      puts(app.evidence)
     end
 
+    desc "schedule", "Run the foreground scheduler loop"
     def schedule
-      @config.validate_for_backup!
-      Scheduler.new(@config) { backup }.run
+      app.schedule
+    end
+
+    desc "version", "Print the running kamal-backup version"
+    def version
+      puts(VERSION)
     end
 
     private
-
-    def restic
-      @restic ||= Restic.new(@config, redactor: @redactor)
-    end
-
-    def database
-      @database ||= begin
-        case @config.database_adapter
-        when "postgres"
-          Databases::Postgres.new(@config, redactor: @redactor)
-        when "mysql"
-          Databases::Mysql.new(@config, redactor: @redactor)
-        when "sqlite"
-          Databases::Sqlite.new(@config, redactor: @redactor)
-        else
-          raise ConfigurationError, "unsupported DATABASE_ADAPTER: #{@config.database_adapter.inspect}"
-        end
-      end
-    end
-
-    def resolve_snapshot(argument, tags)
-      return argument unless argument == "latest"
-
-      snapshot = restic.latest_snapshot(tags: tags)
-      raise ConfigurationError, "no restic snapshot found for #{tags.join(", ")}" unless snapshot
-
-      snapshot["short_id"] || snapshot["id"]
-    end
+      attr_reader :app
   end
 end

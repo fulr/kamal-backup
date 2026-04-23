@@ -114,6 +114,8 @@ kamal-backup schedule
 kamal-backup version
 ```
 
+Use `kamal-backup help [command]` for command-specific usage and examples.
+
 | Command | What it does |
 |---|---|
 | `backup` | Runs one immediate backup, creating one database snapshot and one file snapshot for all `BACKUP_PATHS`. |
@@ -281,6 +283,12 @@ bin/kamal accessory exec backup "kamal-backup evidence"
 
 ## Local Development
 
+Install the CLI dependencies:
+
+```sh
+bundle install
+```
+
 Run tests:
 
 ```sh
@@ -305,7 +313,7 @@ docker build -t kamal-backup .
 
 CI publishes container images to `ghcr.io/crmne/kamal-backup`. Pull requests build the image without pushing; branch, tag, SHA, default-branch `latest`, and default-branch version tags are pushed on non-PR builds. The version tag comes from `lib/kamal_backup/version.rb`, and default-branch pushes also create the matching GitHub release.
 
-The Docker image copies the Ruby CLI directly from `exe/` and `lib/`, which is why `kamal-backup` is on `PATH` inside the container.
+The Docker image installs the bundled gems and copies the Ruby CLI from `exe/` and `lib/`, which is why `kamal-backup` is on `PATH` inside the container.
 
 In normal Kamal use, there is no installation step on the app host. Run the command inside the accessory:
 
@@ -324,9 +332,9 @@ export RESTIC_REPOSITORY=/tmp/kamal-backup-restic
 export RESTIC_PASSWORD=local-password
 export RESTIC_INIT_IF_MISSING=true
 
-kamal-backup backup
-kamal-backup list
-kamal-backup evidence
+bundle exec exe/kamal-backup backup
+bundle exec exe/kamal-backup list
+bundle exec exe/kamal-backup evidence
 ```
 
 An example Docker Compose setup for local integration work is in `examples/docker-compose.integration.yml`.

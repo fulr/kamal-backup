@@ -1,6 +1,3 @@
-require "fileutils"
-require "pathname"
-require "time"
 require "uri"
 require_relative "errors"
 
@@ -97,19 +94,13 @@ module KamalBackup
     end
 
     def database_adapter
-      explicit = value("DATABASE_ADAPTER")
-      return normalize_adapter(explicit) if explicit
-
-      url = value("DATABASE_URL")
-      if url
-        scheme = URI.parse(url).scheme rescue nil
-        detected = normalize_adapter(scheme)
-        return detected if detected
+      if explicit = value("DATABASE_ADAPTER")
+        normalize_adapter(explicit)
+      elsif adapter = adapter_from_database_url
+        adapter
+      elsif value("SQLITE_DATABASE_PATH")
+        "sqlite"
       end
-
-      return "sqlite" if value("SQLITE_DATABASE_PATH")
-
-      nil
     end
 
     def retention
@@ -176,9 +167,9 @@ module KamalBackup
     end
 
     def validate_restore_allowed!
-      return if allow_restore?
-
-      raise ConfigurationError, "restore commands require KAMAL_BACKUP_ALLOW_RESTORE=true"
+      unless allow_restore?
+        raise ConfigurationError, "restore commands require KAMAL_BACKUP_ALLOW_RESTORE=true"
+      end
     end
 
     def validate_file_restore_target!(target)
@@ -187,12 +178,7 @@ module KamalBackup
       expanded_target = File.expand_path(target)
       raise ConfigurationError, "refusing to restore files to /" if expanded_target == "/"
 
-      in_place = backup_paths.any? do |path|
-        expanded_path = File.expand_path(path)
-        expanded_target == expanded_path || expanded_path.start_with?(expanded_target + "/") || expanded_target.start_with?(expanded_path + "/")
-      end
-
-      if in_place && !allow_in_place_file_restore?
+      if in_place_file_restore?(expanded_target) && !allow_in_place_file_restore?
         raise ConfigurationError, "refusing in-place file restore to #{expanded_target}; set KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true to override"
       end
 
@@ -209,20 +195,12 @@ module KamalBackup
 
     def production_like_target?(target)
       target = target.to_s
-      source_targets = [
-        value("DATABASE_URL"),
-        value("SQLITE_DATABASE_PATH"),
-        value("PGDATABASE"),
-        value("MYSQL_DATABASE"),
-        value("MARIADB_DATABASE")
-      ].compact
 
-      return true if source_targets.include?(target)
-
-      lowered = target.downcase
-      lowered.include?("production") ||
-        lowered.match?(%r{(^|[/_.:-])prod([/_.:-]|$)}) ||
-        lowered.match?(%r{(^|[/_.:-])live([/_.:-]|$)})
+      if source_database_targets.include?(target)
+        true
+      else
+        production_named_target?(target.downcase)
+      end
     end
 
     def value(key)
@@ -246,28 +224,58 @@ module KamalBackup
     end
 
     private
+      def integer(key, default, minimum:)
+        raw = value(key)
+        number = raw ? Integer(raw) : default
+        raise ConfigurationError, "#{key} must be >= #{minimum}" if number < minimum
 
-    def integer(key, default, minimum:)
-      raw = value(key)
-      number = raw ? Integer(raw) : default
-      raise ConfigurationError, "#{key} must be >= #{minimum}" if number < minimum
+        number
+      rescue ArgumentError
+        raise ConfigurationError, "#{key} must be an integer"
+      end
 
-      number
-    rescue ArgumentError
-      raise ConfigurationError, "#{key} must be an integer"
-    end
+      def normalize_adapter(value)
+        case value.to_s.downcase
+        when "postgres", "postgresql"
+          "postgres"
+        when "mysql", "mysql2", "mariadb"
+          "mysql"
+        when "sqlite", "sqlite3"
+          "sqlite"
+        else
+          nil
+        end
+      end
 
-    def normalize_adapter(value)
-      case value.to_s.downcase
-      when "postgres", "postgresql"
-        "postgres"
-      when "mysql", "mysql2", "mariadb"
-        "mysql"
-      when "sqlite", "sqlite3"
-        "sqlite"
-      else
+      def adapter_from_database_url
+        if url = value("DATABASE_URL")
+          normalize_adapter(URI.parse(url).scheme)
+        end
+      rescue URI::InvalidURIError
         nil
       end
-    end
+
+      def in_place_file_restore?(expanded_target)
+        backup_paths.any? do |path|
+          expanded_path = File.expand_path(path)
+          expanded_target == expanded_path || expanded_path.start_with?(expanded_target + "/") || expanded_target.start_with?(expanded_path + "/")
+        end
+      end
+
+      def source_database_targets
+        [
+          value("DATABASE_URL"),
+          value("SQLITE_DATABASE_PATH"),
+          value("PGDATABASE"),
+          value("MYSQL_DATABASE"),
+          value("MARIADB_DATABASE")
+        ].compact
+      end
+
+      def production_named_target?(target)
+        target.include?("production") ||
+          target.match?(%r{(^|[/_.:-])prod([/_.:-]|$)}) ||
+          target.match?(%r{(^|[/_.:-])live([/_.:-]|$)})
+      end
   end
 end

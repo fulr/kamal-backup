@@ -1,5 +1,3 @@
-require "uri"
-
 module KamalBackup
   class Redactor
     SECRET_KEY_PATTERN = /(pass|password|secret|token|key|credential|authorization)/i
@@ -32,22 +30,22 @@ module KamalBackup
     end
 
     private
+      def known_secret_values
+        @known_secret_values ||= begin
+          env_secrets = @env.each_with_object([]) do |(key, value), values|
+            values << value.to_s if key.to_s.match?(SECRET_KEY_PATTERN)
+          end
 
-    def known_secret_values
-      @known_secret_values ||= begin
-        env_secrets = @env.each_with_object([]) do |(key, value), values|
-          values << value.to_s if key.to_s.match?(SECRET_KEY_PATTERN)
+          (@secret_values + env_secrets).compact.uniq.reject { |value| value.empty? || value.length < 4 }
         end
-        (@secret_values + env_secrets).compact.uniq.reject { |value| value.empty? || value.length < 4 }
       end
-    end
 
-    def redact_url_credentials(value)
-      value.gsub(%r{(://)([^/\s]+)@}) do
-        "#{$1}#{REDACTED}@"
-      end.gsub(/([?&](?:password|token|secret|key|access_key_id|secret_access_key)=)[^&\s]+/i) do
-        "#{$1}#{REDACTED}"
+      def redact_url_credentials(value)
+        value.gsub(%r{(://)([^/\s]+)@}) do
+          "#{$1}#{REDACTED}@"
+        end.gsub(/([?&](?:password|token|secret|key|access_key_id|secret_access_key)=)[^&\s]+/i) do
+          "#{$1}#{REDACTED}"
+        end
       end
-    end
   end
 end

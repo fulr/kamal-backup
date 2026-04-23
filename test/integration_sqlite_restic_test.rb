@@ -28,12 +28,12 @@ class IntegrationSqliteResticTest < Minitest::Test
         "KAMAL_BACKUP_STATE_DIR" => state
       )
 
-      KamalBackup::CLI.new(env: env).backup
-      KamalBackup::CLI.new(env: env.merge(
+      KamalBackup::App.new(env: env).backup
+      KamalBackup::App.new(env: env.merge(
         "KAMAL_BACKUP_ALLOW_RESTORE" => "true",
         "RESTORE_SQLITE_DATABASE_PATH" => restored_db
-      )).restore_db("latest")
-      KamalBackup::CLI.new(env: env.merge("KAMAL_BACKUP_ALLOW_RESTORE" => "true")).restore_files("latest", restored_files)
+      )).restore_database("latest")
+      KamalBackup::App.new(env: env.merge("KAMAL_BACKUP_ALLOW_RESTORE" => "true")).restore_files("latest", target: restored_files)
 
       output = `sqlite3 #{restored_db} "select name from items"`
       assert_equal "stored", output.strip

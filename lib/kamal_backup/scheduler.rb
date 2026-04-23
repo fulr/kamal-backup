@@ -29,22 +29,21 @@ module KamalBackup
     end
 
     private
-
-    def install_signal_handlers
-      %w[TERM INT].each do |signal|
-        Signal.trap(signal) { @stop = true }
-      rescue ArgumentError
-        nil
+      def install_signal_handlers
+        %w[TERM INT].each do |signal|
+          Signal.trap(signal) { @stop = true }
+        rescue ArgumentError
+          nil
+        end
       end
-    end
 
-    def sleep_interruptibly(seconds)
-      deadline = Time.now + seconds
-      sleep([deadline - Time.now, 1].min) while !@stop && Time.now < deadline
-    end
+      def sleep_interruptibly(seconds)
+        deadline = Time.now + seconds
+        sleep([deadline - Time.now, 1].min) while !@stop && Time.now < deadline
+      end
 
-    def log(message)
-      $stdout.puts("[kamal-backup] #{message}")
-    end
+      def log(message)
+        $stdout.puts("[kamal-backup] #{message}")
+      end
   end
 end

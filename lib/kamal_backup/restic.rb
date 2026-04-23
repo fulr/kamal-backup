@@ -16,19 +16,21 @@ module KamalBackup
     def ensure_repository!
       run(%w[snapshots --json])
     rescue CommandError => e
-      raise e unless config.restic_init_if_missing?
-
-      log("restic repository not ready, running restic init")
-      run(%w[init])
+      if config.restic_init_if_missing?
+        log("restic repository not ready, running restic init")
+        run(%w[init])
+      else
+        raise e
+      end
     end
 
-    def backup_command_output(command, filename:, tags:)
+    def backup_stream(command, filename:, tags:)
       restic_command = CommandSpec.new(argv: ["restic", "backup", "--stdin", "--stdin-filename", filename] + tag_args(common_tags + tags))
       log("backing up stream as #{filename}")
       pipe_commands(command, restic_command, producer_label: "dump", consumer_label: "restic backup")
     end
 
-    def backup_file_content(path, filename:, tags:)
+    def backup_file(path, filename:, tags:)
       command = CommandSpec.new(argv: ["restic", "backup", "--stdin", "--stdin-filename", filename] + tag_args(common_tags + tags))
       log("backing up file content as #{filename}")
 
@@ -52,11 +54,12 @@ module KamalBackup
 
     def backup_paths(paths, tags:)
       paths = Array(paths).compact.map(&:to_s).reject(&:empty?)
-      return if paths.empty?
 
-      path_tags = paths.map { |path| "path:#{config.backup_path_label(path)}" }
-      log("backing up #{paths.size} file path(s): #{paths.join(", ")}")
-      run(["backup"] + paths + tag_args(common_tags + tags + path_tags))
+      if paths.any?
+        path_tags = paths.map { |path| "path:#{config.backup_path_label(path)}" }
+        log("backing up #{paths.size} file path(s): #{paths.join(", ")}")
+        run(["backup"] + paths + tag_args(common_tags + tags + path_tags))
+      end
     end
 
     def backup_path(path, tags:)
@@ -122,12 +125,12 @@ module KamalBackup
       end&.fetch("path")
     end
 
-    def dump_file_to_command(snapshot, filename, command)
+    def pipe_dump_to_command(snapshot, filename, command)
       restic_command = CommandSpec.new(argv: ["restic", "dump", snapshot, filename])
       pipe_commands(restic_command, command, producer_label: "restic dump", consumer_label: command.argv.first)
     end
 
-    def dump_file_to_path(snapshot, filename, target_path)
+    def write_dump_to_path(snapshot, filename, target_path)
       command = CommandSpec.new(argv: ["restic", "dump", snapshot, filename])
       target_path = File.expand_path(target_path)
       FileUtils.mkdir_p(File.dirname(target_path))
@@ -165,75 +168,74 @@ module KamalBackup
     end
 
     private
-
-    def tag_args(tags)
-      tags.compact.each_with_object([]) { |tag, args| args.concat(["--tag", tag]) }
-    end
-
-    def pipe_commands(producer, consumer, producer_label:, consumer_label:)
-      Open3.popen3(producer.env, *producer.argv) do |producer_stdin, producer_stdout, producer_stderr, producer_wait|
-        producer_stdin.close
-
-        Open3.popen3(consumer.env, *consumer.argv) do |consumer_stdin, consumer_stdout, consumer_stderr, consumer_wait|
-          producer_err_reader = Thread.new { producer_stderr.read }
-          consumer_out_reader = Thread.new { consumer_stdout.read }
-          consumer_err_reader = Thread.new { consumer_stderr.read }
-
-          copy_error = nil
-          copy_thread = Thread.new do
-            IO.copy_stream(producer_stdout, consumer_stdin)
-          rescue StandardError => e
-            copy_error = e
-          ensure
-            consumer_stdin.close unless consumer_stdin.closed?
-          end
-
-          copy_thread.join
-          producer_status = producer_wait.value
-          consumer_status = consumer_wait.value
-
-          producer_err = producer_err_reader.value
-          consumer_out = consumer_out_reader.value
-          consumer_err = consumer_err_reader.value
-
-          if copy_error
-            raise CommandError.new(
-              "failed to pipe #{producer_label} to #{consumer_label}: #{copy_error.message}",
-              command: consumer,
-              stderr: copy_error.message
-            )
-          end
-
-          raise_command_error(producer, producer_status, "", producer_err) unless producer_status.success?
-          raise_command_error(consumer, consumer_status, consumer_out, consumer_err) unless consumer_status.success?
-
-          CommandResult.new(stdout: consumer_out, stderr: consumer_err, status: consumer_status.exitstatus)
-        end
+      def tag_args(tags)
+        tags.compact.each_with_object([]) { |tag, args| args.concat(["--tag", tag]) }
       end
-    rescue Errno::ENOENT => e
-      command = e.message.include?(producer.argv.first) ? producer : consumer
-      raise CommandError.new("command not found: #{command.argv.first}", command: command, status: 127, stderr: e.message)
-    end
 
-    def raise_command_error(command, status, stdout, stderr)
-      raise CommandError.new(
-        "command failed (#{status.exitstatus}): #{command.display(redactor)}\n#{redactor.redact_string(stderr)}",
-        command: command,
-        status: status.exitstatus,
-        stdout: redactor.redact_string(stdout),
-        stderr: redactor.redact_string(stderr)
-      )
-    end
+      def pipe_commands(producer, consumer, producer_label:, consumer_label:)
+        Open3.popen3(producer.env, *producer.argv) do |producer_stdin, producer_stdout, producer_stderr, producer_wait|
+          producer_stdin.close
 
-    def write_last_check(payload)
-      FileUtils.mkdir_p(config.state_dir)
-      File.write(config.last_check_path, JSON.pretty_generate(payload.transform_values { |value| value.respond_to?(:iso8601) ? value.iso8601 : redactor.redact_string(value.to_s) }))
-    rescue SystemCallError
-      nil
-    end
+          Open3.popen3(consumer.env, *consumer.argv) do |consumer_stdin, consumer_stdout, consumer_stderr, consumer_wait|
+            producer_err_reader = Thread.new { producer_stderr.read }
+            consumer_out_reader = Thread.new { consumer_stdout.read }
+            consumer_err_reader = Thread.new { consumer_stderr.read }
 
-    def log(message)
-      $stdout.puts("[kamal-backup] #{redactor.redact_string(message)}")
-    end
+            copy_error = nil
+            copy_thread = Thread.new do
+              IO.copy_stream(producer_stdout, consumer_stdin)
+            rescue StandardError => e
+              copy_error = e
+            ensure
+              consumer_stdin.close unless consumer_stdin.closed?
+            end
+
+            copy_thread.join
+            producer_status = producer_wait.value
+            consumer_status = consumer_wait.value
+
+            producer_err = producer_err_reader.value
+            consumer_out = consumer_out_reader.value
+            consumer_err = consumer_err_reader.value
+
+            if copy_error
+              raise CommandError.new(
+                "failed to pipe #{producer_label} to #{consumer_label}: #{copy_error.message}",
+                command: consumer,
+                stderr: copy_error.message
+              )
+            end
+
+            raise_command_error(producer, producer_status, "", producer_err) unless producer_status.success?
+            raise_command_error(consumer, consumer_status, consumer_out, consumer_err) unless consumer_status.success?
+
+            CommandResult.new(stdout: consumer_out, stderr: consumer_err, status: consumer_status.exitstatus)
+          end
+        end
+      rescue Errno::ENOENT => e
+        command = e.message.include?(producer.argv.first) ? producer : consumer
+        raise CommandError.new("command not found: #{command.argv.first}", command: command, status: 127, stderr: e.message)
+      end
+
+      def raise_command_error(command, status, stdout, stderr)
+        raise CommandError.new(
+          "command failed (#{status.exitstatus}): #{command.display(redactor)}\n#{redactor.redact_string(stderr)}",
+          command: command,
+          status: status.exitstatus,
+          stdout: redactor.redact_string(stdout),
+          stderr: redactor.redact_string(stderr)
+        )
+      end
+
+      def write_last_check(payload)
+        FileUtils.mkdir_p(config.state_dir)
+        File.write(config.last_check_path, JSON.pretty_generate(payload.transform_values { |value| value.respond_to?(:iso8601) ? value.iso8601 : redactor.redact_string(value.to_s) }))
+      rescue SystemCallError
+        nil
+      end
+
+      def log(message)
+        $stdout.puts("[kamal-backup] #{redactor.redact_string(message)}")
+      end
   end
 end
