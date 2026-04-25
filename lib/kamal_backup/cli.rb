@@ -50,6 +50,14 @@ module KamalBackup
         !options[:destination].to_s.strip.empty? || !options[:config_file].to_s.strip.empty?
       end
 
+      def default_deploy_config?
+        File.file?(File.expand_path(KamalBridge::DEFAULT_CONFIG_FILE))
+      end
+
+      def version_remote_mode?
+        deployment_mode? || default_deploy_config?
+      end
+
       def accessory_name
         @accessory_name ||= bridge.accessory_name(preferred: local_preferences.accessory_name)
       end
@@ -376,7 +384,7 @@ module KamalBackup
 
     desc "version", "Print the running kamal-backup version"
     def version
-      if deployment_mode?
+      if version_remote_mode?
         print_remote_version_status
       else
         puts(VERSION)

@@ -51,7 +51,7 @@ Use `kamal-backup help`, `kamal-backup help restore`, or `kamal-backup help dril
 | `check` | Run `restic check` and store the latest result under `KAMAL_BACKUP_STATE_DIR`. With `-d` or `-c`, it runs through Kamal against the backup accessory and requires matching local/remote versions. |
 | `evidence` | Print redacted JSON for ops records or security reviews, including latest snapshots, latest check result, latest drill result, retention, and tool versions. With `-d` or `-c`, it runs through Kamal against the backup accessory and requires matching local/remote versions. |
 | `schedule` | Run the foreground scheduler loop. Normally the accessory container runs this by default, but you can also invoke it explicitly through `-d` or `-c` when debugging. Remote execution requires matching local/remote versions. |
-| `version` | Print the running `kamal-backup` version. `--version` and `-v` print the local gem version. `version` with `-d` or `-c` prints both the local gem version and the production accessory version, plus sync status. |
+| `version` | Print the running `kamal-backup` version. `--version` and `-v` print the local gem version. From an app checkout with `config/deploy.yml`, `version` also prints the accessory version and sync status; `-d` and `-c` still work when you need an explicit Kamal context. |
 
 ## Notes
 

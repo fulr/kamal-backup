@@ -117,6 +117,8 @@ bundle exec kamal-backup -d production version
 bundle exec kamal-backup -d production schedule
 ```
 
+From the app checkout, `kamal-backup version` without `-d` is also a quick diagnostic: it reads `config/deploy.yml`, checks the backup accessory version, and tells you whether the local gem and remote accessory are in sync.
+
 ## What the first backup creates
 
 Each backup run creates:

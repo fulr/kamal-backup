@@ -300,6 +300,36 @@ class CLITest < Minitest::Test
     assert_includes out, "status: in sync"
   end
 
+  def test_version_without_destination_uses_default_deploy_config_when_present
+    fake_bridge = Object.new
+    requested_accessories = []
+
+    fake_bridge.define_singleton_method(:accessory_name) { |preferred:| "backup" }
+    fake_bridge.define_singleton_method(:remote_version) do |accessory_name:|
+      requested_accessories << accessory_name
+      KamalBackup::VERSION
+    end
+
+    Dir.mktmpdir do |dir|
+      config_dir = File.join(dir, "config")
+      FileUtils.mkdir_p(config_dir)
+      File.write(File.join(config_dir, "deploy.yml"), "accessories: {}\n")
+
+      out, _ = Dir.chdir(dir) do
+        capture_io do
+          with_fake_bridge(fake_bridge) do
+            KamalBackup::CLI.start(["version"], env: {})
+          end
+        end
+      end
+
+      assert_equal ["backup"], requested_accessories
+      assert_includes out, "local: #{KamalBackup::VERSION}"
+      assert_includes out, "remote: #{KamalBackup::VERSION}"
+      assert_includes out, "status: in sync"
+    end
+  end
+
   def test_remote_commands_fail_when_versions_do_not_match
     fake_bridge = Object.new
 

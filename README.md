@@ -145,7 +145,7 @@ kamal-backup version
 
 Production-side commands shell out through Kamal when you pass `-d` or `-c`. Local commands run on your machine.
 
-Remote-backed commands require the local gem version and the backup accessory version to match. If they drift, `kamal-backup` fails fast and tells you to reboot the accessory so it pulls the current `latest` image. `version` is the diagnostic exception: it shows both versions and the sync status.
+Remote-backed commands require the local gem version and the backup accessory version to match. If they drift, `kamal-backup` fails fast and tells you to reboot the accessory so it pulls the current `latest` image. `version` is the diagnostic exception: from an app checkout with `config/deploy.yml`, it shows both versions and the sync status even without `-d`.
 
 Common examples:
 
