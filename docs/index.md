@@ -25,14 +25,14 @@ hero:
 features:
   - icon: 🕒
     title: Runs on a Schedule
-    details: Boot the accessory and it runs kamal-backup schedule by default. Set BACKUP_SCHEDULE_SECONDS and keep daily Rails backups moving without cron glue.
+    details: Boot the accessory and it runs `kamal-backup schedule` by default. Set `BACKUP_SCHEDULE_SECONDS` and keep daily Rails backups moving without cron glue.
   - icon: 🗄️
     title: Databases and Active Storage
-    details: Back up PostgreSQL, MySQL/MariaDB, or SQLite with database-native tools, plus file-backed Active Storage files from mounted volumes such as /data/storage.
+    details: Back up PostgreSQL, MySQL/MariaDB, or SQLite with database-native tools, plus file-backed Active Storage files from mounted volumes such as `/data/storage`.
   - icon: 🔒
     title: Restore Drills Built In
     details: Restore locally or into scratch production-side targets, run verification commands, and record the result instead of trusting backup logs.
   - icon: ✅
     title: Evidence for Security Reviews
-    details: Produce redacted JSON with latest database and Active Storage snapshots, restic checks, restore drills, retention settings, and tool versions for security reviews like CASA.
+    details: Produce redacted JSON with latest database and Active Storage snapshots, `restic check`, restore drills, retention settings, and tool versions for security reviews like CASA.
 ---
