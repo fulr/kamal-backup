@@ -81,6 +81,10 @@ jekyll_vitepress:
     repository: crmne/kamal-backup
     text: Star
     show_count: true
+  github_sponsor:
+    enabled: true
+    user: crmne
+    text: Sponsor
   labels:
     outline: On this page
     sidebar_menu: Menu
