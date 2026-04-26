@@ -48,23 +48,21 @@ jekyll_vitepress:
     dark_theme: github.dark
   tokens:
     light:
-      "--vp-c-brand-1": "#2563eb"
-      "--vp-c-brand-2": "#3b82f6"
-      "--vp-c-brand-3": "#1d4ed8"
-      "--vp-c-brand-soft": rgba(37, 99, 235, 0.14)
+      "--vp-c-brand-1": "#0a82f5"
+      "--vp-c-brand-2": "#2394ff"
+      "--vp-c-brand-3": "#006ed8"
+      "--vp-c-brand-soft": rgba(10, 130, 245, 0.14)
       "--vp-home-hero-name-color": transparent
-      "--vp-home-hero-name-background": "-webkit-linear-gradient(120deg, #0a82f5 20%, #5db43e 84%)"
-      "--vp-home-hero-image-background-image": "radial-gradient(circle at 34% 32%, rgba(10, 130, 245, 0.58), transparent 36%), radial-gradient(circle at 68% 64%, rgba(93, 180, 62, 0.50), transparent 38%)"
-      "--vp-home-hero-image-filter": blur(60px)
+      "--vp-home-hero-name-background": "-webkit-linear-gradient(120deg, #5db43e 30%, #0a82f5)"
+      "--vp-home-hero-image-background-image": "linear-gradient(-45deg, #5db43e 50%, #0a82f5 50%)"
     dark:
-      "--vp-c-brand-1": "#60a5fa"
-      "--vp-c-brand-2": "#93c5fd"
-      "--vp-c-brand-3": "#3b82f6"
-      "--vp-c-brand-soft": rgba(96, 165, 250, 0.16)
+      "--vp-c-brand-1": "#4aa3ff"
+      "--vp-c-brand-2": "#78bbff"
+      "--vp-c-brand-3": "#0a82f5"
+      "--vp-c-brand-soft": rgba(74, 163, 255, 0.16)
       "--vp-home-hero-name-color": transparent
-      "--vp-home-hero-name-background": "-webkit-linear-gradient(120deg, #60a5fa 18%, #86efac 84%)"
-      "--vp-home-hero-image-background-image": "radial-gradient(circle at 34% 32%, rgba(96, 165, 250, 0.44), transparent 38%), radial-gradient(circle at 68% 64%, rgba(93, 180, 62, 0.38), transparent 40%)"
-      "--vp-home-hero-image-filter": blur(64px)
+      "--vp-home-hero-name-background": "-webkit-linear-gradient(120deg, #77c85a 30%, #4aa3ff)"
+      "--vp-home-hero-image-background-image": "linear-gradient(-45deg, #77c85a 50%, #4aa3ff 50%)"
   footer:
     enabled: true
     show_on_docs: false
