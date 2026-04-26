@@ -37,6 +37,8 @@ services:
     volumes:
       - restic-repo:/restic-repo
       - ./sample-storage:/data/storage:ro
+      - backup-state:/var/lib/kamal-backup
 
 volumes:
   restic-repo:
+  backup-state:

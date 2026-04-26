@@ -1,5 +1,5 @@
 # When you pass -d/-c, APP_NAME, DATABASE_ADAPTER, RESTIC_REPOSITORY,
-# and LOCAL_RESTORE_SOURCE_PATHS can come from the Kamal backup accessory.
+# and source Active Storage paths can come from the Kamal backup accessory.
 database_url: postgres://localhost/chatwithwork_development
 backup_paths:
   - storage

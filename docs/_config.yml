@@ -1,5 +1,5 @@
 title: kamal-backup
-description: Kamal-first encrypted backups for databases and mounted app files using restic.
+description: Scheduled Rails backups for Kamal apps, covering databases, file-backed Active Storage, restore drills, and review evidence.
 lang: en-US
 timezone: Europe/Berlin
 

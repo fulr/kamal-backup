@@ -1,14 +1,16 @@
 ---
 title: Getting Started
-description: Install the gem, add the backup accessory, generate the shared config stub, and run the first backup with Kamal-style destination selection.
+description: Add one Kamal accessory that runs scheduled Rails backups for your database and file-backed Active Storage files.
 nav_order: 1
 ---
+
+`kamal-backup` is meant to feel like the Rails/Kamal-native path: add a gem, add one accessory, point it at a restic repository, and let the accessory run backups on a schedule.
 
 This guide assumes:
 
 - you already deploy the app with Kamal;
 - your database is PostgreSQL, MySQL/MariaDB, or SQLite;
-- any file data you want to back up is available on a mounted path such as `/data/storage`.
+- file-backed Active Storage files are available on a mounted path such as `/data/storage`.
 
 In normal Kamal use, restic runs inside the backup accessory image. You do not install restic on the Rails app host.
 
@@ -35,19 +37,19 @@ That creates:
 
 The shared file is where you name the accessory if it is not called `backup`.
 
-For most Rails apps, `restore local` and `drill local` can infer the local development database, the `storage` path, and `tmp/kamal-backup` without a second file. Only create `config/kamal-backup.local.yml` when your local targets are nonstandard.
+For most Rails apps, `restore local` and `drill local` can infer the local development database, the local `storage` path for Active Storage, and `tmp/kamal-backup` without a second file. Only create `config/kamal-backup.local.yml` when your local targets are nonstandard.
 
 If you want to run `restore local` or `drill local`, install `restic` on your machine too. The backup accessory image already includes it for production-side commands.
 
-## 2. Choose a restic repository
+## 2. Choose where backups live
 
-Before you boot the accessory, decide where the backups will live. Common choices are:
+Before you boot the accessory, decide where the encrypted restic repository will live. Common choices are:
 
 - S3-compatible object storage;
 - a restic REST server you run separately;
 - a filesystem path for local development.
 
-`kamal-backup` writes to that repository through restic. It does not manage the repository service for you.
+`kamal-backup` chooses restic because it gives Rails teams encrypted snapshots, deduplication, retention, repository checks, and a portable restore format without inventing a new backup backend. It does not manage the repository service for you.
 
 ## 3. Add the accessory
 
@@ -74,6 +76,7 @@ accessories:
         - AWS_SECRET_ACCESS_KEY
     volumes:
       - "chatwithwork_storage:/data/storage:ro"
+      - "chatwithwork_backup_state:/var/lib/kamal-backup"
 ```
 
 That same accessory config becomes the source of truth for production-side commands, and for local restore or local drill when you pass `-d` or `-c`.
@@ -85,7 +88,9 @@ bin/kamal accessory boot backup
 bin/kamal accessory logs backup
 ```
 
-The container default command is `kamal-backup schedule`, so once the accessory is up it starts running the foreground scheduler loop.
+The container default command is `kamal-backup schedule`, so once the accessory is up it starts running scheduled backups. In the example above, `BACKUP_SCHEDULE_SECONDS=86400` means one backup per day.
+
+The `/var/lib/kamal-backup` volume preserves the latest `check` and restore drill records across accessory reboots. Keep it mounted if you want `kamal-backup evidence` to include recent operational proof after the container is recreated.
 
 When you update the local gem, production-side commands expect the accessory to be on the same `kamal-backup` version. If they drift, reboot the accessory so it pulls the current `latest` image:
 
@@ -93,7 +98,7 @@ When you update the local gem, production-side commands expect the accessory to 
 bin/kamal accessory reboot backup
 ```
 
-## 5. Run the first backup
+## 5. Run and inspect the first backup
 
 From your app checkout, use the gem and let it shell out through Kamal:
 
@@ -124,6 +129,15 @@ From the app checkout, `kamal-backup version` without `-d` is also a quick diagn
 Each backup run creates:
 
 - one database backup stored through restic stdin;
-- one `type:files` restic snapshot containing all configured `BACKUP_PATHS` entries.
+- one `type:files` restic snapshot containing the configured file-backed Active Storage paths in `BACKUP_PATHS`.
 
-Database dump snapshots are tagged with `kamal-backup`, `app:<name>`, `type:database`, `adapter:<adapter>`, and `run:<timestamp>`. File snapshots use `type:files`, the same run tag, and informational `path:<label>` tags for the configured paths. Restore selects by `type:files`, not by one path tag.
+Database dump snapshots are tagged with `kamal-backup`, `app:<name>`, `type:database`, `adapter:<adapter>`, and `run:<timestamp>`. Active Storage file snapshots use `type:files`, the same run tag, and informational `path:<label>` tags for the configured paths. Restore selects by `type:files`, not by one path tag.
+
+The next useful step is a restore drill:
+
+```sh
+bundle exec kamal-backup -d production drill local latest --check "bin/rails runner 'puts User.count'"
+bundle exec kamal-backup -d production evidence
+```
+
+That gives you a backup, a restore proof, and a redacted evidence packet for a security review like CASA.

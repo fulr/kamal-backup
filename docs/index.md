@@ -1,12 +1,12 @@
 ---
 layout: home
 title: Home
-description: "Rails-friendly encrypted backups for Kamal apps: PostgreSQL, MySQL, SQLite, and file-backed Active Storage on mounted volumes."
+description: "The easiest scheduled backup setup for Rails apps deployed with Kamal: databases, file-backed Active Storage, restore drills, and security review evidence."
 permalink: /
 hero:
   name: kamal-backup
-  text: Back up Postgres, MySQL, SQLite, and Rails file data from Kamal
-  tagline: Run encrypted backups, restore drills, and evidence collection for CASA and other security reviews from one Kamal accessory.
+  text: Scheduled Rails backups for Kamal apps
+  tagline: Back up PostgreSQL, MySQL, SQLite, and file-backed Active Storage files from one Kamal accessory, then run restore drills and produce evidence for security reviews like CASA.
   actions:
     - theme: brand
       text: Get Started
@@ -23,16 +23,16 @@ hero:
     width: 256
     height: 256
 features:
+  - icon: 🕒
+    title: Runs on a Schedule
+    details: Boot the accessory and it runs kamal-backup schedule by default. Set BACKUP_SCHEDULE_SECONDS and keep daily Rails backups moving without cron glue.
   - icon: 🗄️
-    title: PostgreSQL, MySQL, and SQLite
-    details: Use `pg_dump`, `mariadb-dump` or `mysqldump`, and `sqlite3 .backup` to capture the database with tools Rails developers already know.
-  - icon: 📁
-    title: Active Storage on Mounted Volumes
-    details: Back up file-backed Active Storage and other mounted app paths in one restic file snapshot per run.
+    title: Databases and Active Storage
+    details: Back up PostgreSQL, MySQL/MariaDB, or SQLite with database-native tools, plus file-backed Active Storage files from mounted volumes such as /data/storage.
   - icon: 🔒
-    title: Restore Drills, Not Wishful Thinking
-    details: Run deliberate database and file restores with explicit targets and safety checks before a reviewer asks for proof.
+    title: Restore Drills Built In
+    details: Restore locally or into scratch production-side targets, run verification commands, and record the result instead of trusting backup logs.
   - icon: ✅
-    title: Evidence for CASA and Reviews
-    details: Produce a redacted JSON summary with latest snapshots, latest check result, retention settings, and tool versions.
+    title: Evidence for Security Reviews
+    details: Produce redacted JSON with latest database and Active Storage snapshots, restic checks, restore drills, retention settings, and tool versions for security reviews like CASA.
 ---

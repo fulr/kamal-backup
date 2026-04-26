@@ -1,6 +1,6 @@
 ---
 title: Restore
-description: Restore backups onto your local machine or back into production, with the same local-vs-production meaning everywhere in the CLI and docs.
+description: Restore database and Active Storage backups onto your local machine or back into production.
 nav_order: 4
 ---
 
@@ -8,8 +8,8 @@ nav_order: 4
 
 `kamal-backup` has two restore destinations:
 
-- `restore local`: run on your machine, restore into your local database and local file paths
-- `restore production`: run on production infrastructure, restore back into the live production database and production file paths
+- `restore local`: run on your machine, restore into your local database and local Active Storage path
+- `restore production`: run on production infrastructure, restore back into the live production database and production Active Storage path
 
 That distinction is strict. `local` means your machine. `production` means the production-side accessory context.
 
@@ -27,13 +27,13 @@ When you pass `-d` or `-c`, `kamal-backup` asks Kamal for the backup accessory c
 For a normal Rails app, the local targets come from Rails conventions:
 
 - the development database in `config/database.yml`
-- `storage` as the local files target
+- `storage` as the local Active Storage target
 - `tmp/kamal-backup` as the local drill state directory
 
 You still provide the local secrets yourself in env:
 
 - `RESTIC_PASSWORD`
-- `POSTGRES_PASSWORD` or `MYSQL_PWD` when needed
+- `PGPASSWORD` or `MYSQL_PWD` when needed
 - `RESTIC_REPOSITORY` when it is not visible through `kamal config`
 
 And you need the `restic` binary installed locally and available on `PATH`.
@@ -49,7 +49,7 @@ Without `-d` or `-c`, `restore local` reads from the local Rails app and env.
 What it does:
 
 - restores the latest database backup into your current local database
-- restores the latest file snapshot into a temporary staging directory
+- restores the latest Active Storage file snapshot into a temporary staging directory
 - replaces the local `BACKUP_PATHS` with the restored copy
 
 If your local targets are nonstandard, create `config/kamal-backup.local.yml`:
@@ -61,13 +61,13 @@ backup_paths:
 state_dir: tmp/kamal-backup
 ```
 
-If the production file paths differ from your local file paths and you are not using `-d` or `-c`, set `LOCAL_RESTORE_SOURCE_PATHS` yourself.
+If the production Active Storage paths differ from your local Active Storage paths and you are not using `-d` or `-c`, set `LOCAL_RESTORE_SOURCE_PATHS` yourself.
 
 `restore local` refuses to run when `RAILS_ENV`, `RACK_ENV`, `APP_ENV`, or `KAMAL_ENVIRONMENT` is set to `production` unless you explicitly override that guard.
 
 ## `restore production`
 
-This is the emergency path: restore back into the live production database and live production file paths.
+This is the emergency path: restore back into the live production database and live production Active Storage path.
 
 From your app checkout:
 

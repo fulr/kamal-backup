@@ -177,6 +177,7 @@ module KamalBackup
                   - AWS_SECRET_ACCESS_KEY
               volumes:
                 - "your_app_storage:/data/storage:ro"
+                - "your_app_backup_state:/var/lib/kamal-backup"
         YAML
       end
     end
@@ -195,15 +196,15 @@ module KamalBackup
         CLI.basename
       end
 
-      desc "local [SNAPSHOT]", "Restore the backup into the local database and local files"
+      desc "local [SNAPSHOT]", "Restore the backup into the local database and Active Storage path"
       def local(snapshot = "latest")
-        confirm!("Restore #{snapshot} into the local database and local files? This will overwrite local data.")
+        confirm!("Restore #{snapshot} into the local database and Active Storage path? This will overwrite local data.")
         puts(JSON.pretty_generate(local_app.restore_to_local_machine(snapshot)))
       end
 
-      desc "production [SNAPSHOT]", "Restore the backup into the production database and production files"
+      desc "production [SNAPSHOT]", "Restore the backup into the production database and Active Storage path"
       def production(snapshot = "latest")
-        confirm!("Restore #{snapshot} into the production database and production files? This will overwrite production data.")
+        confirm!("Restore #{snapshot} into the production database and Active Storage path? This will overwrite production data.")
 
         if deployment_mode?
           exec_remote(["kamal-backup", "restore", "production", snapshot, "--yes"])
@@ -229,7 +230,7 @@ module KamalBackup
 
       method_option :database, type: :string, desc: "Scratch database name for PostgreSQL or MySQL"
       method_option :"sqlite-path", type: :string, desc: "Scratch SQLite path for production-side drills"
-      method_option :files, type: :string, default: "/restore/files", desc: "Scratch files target for the drill"
+      method_option :files, type: :string, default: "/restore/files", desc: "Scratch Active Storage target for the drill"
       method_option :check, type: :string, desc: "Run a verification command after the restore"
       desc "production [SNAPSHOT]", "Run a restore drill on production infrastructure using scratch targets"
       def production(snapshot = "latest")
@@ -299,7 +300,7 @@ module KamalBackup
     class_option :config_file, aliases: "-c", type: :string, desc: "Path to Kamal deploy config file"
     class_option :destination, aliases: "-d", type: :string, desc: "Kamal destination to use"
     remove_command :tree
-    desc "restore SUBCOMMAND ...ARGS", "Restore a backup onto the local machine or into production"
+    desc "restore SUBCOMMAND ...ARGS", "Restore a database and Active Storage backup locally or into production"
     subcommand "restore", RestoreCLI
     desc "drill SUBCOMMAND ...ARGS", "Run a restore drill on the local machine or on production infrastructure"
     subcommand "drill", DrillCLI
@@ -323,7 +324,7 @@ module KamalBackup
 
     include Helpers
 
-    desc "backup", "Run one backup immediately"
+    desc "backup", "Run one database and Active Storage backup immediately"
     def backup
       if deployment_mode?
         exec_remote(["kamal-backup", "backup"])
@@ -350,7 +351,7 @@ module KamalBackup
       end
     end
 
-    desc "evidence", "Print redacted operational evidence as JSON"
+    desc "evidence", "Print redacted backup, check, and restore-drill evidence as JSON"
     def evidence
       if deployment_mode?
         exec_remote(["kamal-backup", "evidence"])
@@ -359,7 +360,7 @@ module KamalBackup
       end
     end
 
-    desc "init", "Create kamal-backup config stubs for local restore and drill commands"
+    desc "init", "Create config and print the scheduled backup accessory snippet"
     def init
       write_init_file(shared_config_path, shared_config_template)
 
@@ -368,7 +369,8 @@ module KamalBackup
       puts
       puts deploy_snippet
       puts
-      puts "For most Rails apps, restore local and drill local can infer the development database, storage path, and tmp state directory."
+      puts "The accessory runs scheduled database and Active Storage backups with BACKUP_SCHEDULE_SECONDS."
+      puts "For most Rails apps, restore local and drill local can infer the development database, Active Storage path, and tmp state directory."
       puts "Local restore and drill also require the restic binary on your machine."
       puts "Create config/kamal-backup.local.yml only if you need to override those local defaults."
     end

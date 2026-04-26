@@ -1,6 +1,6 @@
 ---
 title: Security and Restore Safety
-description: How kamal-backup handles secrets, subprocesses, backup formats, and deliberate restores.
+description: How kamal-backup handles secrets, subprocesses, database exports, Active Storage snapshots, and deliberate restores.
 nav_order: 2
 ---
 
@@ -28,6 +28,10 @@ Database backups use database-native export tools:
 - SQLite: `sqlite3 <db> ".backup ..."`
 
 This is why the docs talk about database backups rather than raw database directories. `kamal-backup` is exporting application data with the tools Rails teams already use for dumps and restores.
+
+## Active Storage backups
+
+File-backed Active Storage files are backed up from configured mounted paths with `restic backup`. In a Kamal accessory, mount the production storage volume read-only when possible so the backup container can read Active Storage files without being able to modify them.
 
 ## Deliberate restores
 

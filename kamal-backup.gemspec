@@ -5,8 +5,8 @@ Gem::Specification.new do |spec|
   spec.name = "kamal-backup"
   spec.version = KamalBackup::VERSION
   spec.authors = ["crmne"]
-  spec.summary = "Rails-friendly encrypted backups and restore drills for Kamal apps"
-  spec.description = "Back up PostgreSQL, MySQL, SQLite, and mounted Rails file data into restic, then run deliberate restores and restore drills."
+  spec.summary = "Scheduled Rails backups, restore drills, and evidence for Kamal apps"
+  spec.description = "Back up PostgreSQL, MySQL, SQLite, and file-backed Active Storage files into restic on a schedule, then run restore drills and produce review evidence."
   spec.homepage = "https://github.com/crmne/kamal-backup"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"

@@ -1,14 +1,14 @@
 ---
 title: Evidence for Security Reviews
-description: Use the evidence command, restore drills, and restic checks to prepare for CASA and other security assessments.
+description: Use scheduled backups, restore drills, restic checks, and evidence output to prepare for security reviews like CASA.
 nav_order: 6
 ---
 
-`kamal-backup evidence` exists for the moment when someone asks, "Show me how backups are configured today."
+`kamal-backup evidence` exists for the moment when someone asks, "Show me how Rails backups are configured today, whether they run on a schedule, and whether you have tested restores."
 
 That might be:
 
-- a CASA reviewer;
+- a reviewer for a security program like CASA;
 - a customer security questionnaire;
 - your own internal ops review;
 - an incident retrospective after a restore drill.
@@ -25,10 +25,10 @@ The JSON includes:
 - current time
 - database adapter
 - redacted restic repository
-- configured file backup paths
+- configured Active Storage backup paths
 - whether client-side forget/prune is enabled
 - retention policy
-- latest database and file snapshots
+- latest database and Active Storage file snapshots
 - last tracked `restic check` result
 - last tracked restore drill result
 - image version
@@ -36,7 +36,7 @@ The JSON includes:
 
 Secrets, passwords, access keys, and database URL credentials are redacted before output.
 
-## How to use this for CASA or another review
+## How to use this for a security review
 
 `evidence` is not the entire story by itself. It is the machine-readable appendix that backs up the story you tell in the review.
 
@@ -73,12 +73,14 @@ RESTIC_CHECK_READ_DATA_SUBSET=5%
 
 The latest check result is stored under `KAMAL_BACKUP_STATE_DIR` and included in evidence output when available. The latest restore drill result is stored there too.
 
+In the accessory container, the default state directory is `/var/lib/kamal-backup`. Mount that path as a persistent volume if you want the latest check and restore drill records to survive accessory replacement.
+
 ## What reviewers usually want to hear
 
 Avoid generic phrases like "we have backups." Say something concrete instead:
 
-- backups run from a dedicated Kamal accessory
+- backups run from a dedicated Kamal accessory on a defined schedule
 - PostgreSQL, MySQL/MariaDB, or SQLite are backed up with database-native export tools
-- file-backed Active Storage is backed up from mounted volumes
+- file-backed Active Storage files are backed up from mounted volumes
 - restores are explicit, prompted operations with separate local and production-side drill flows
 - the team runs restore drills and keeps evidence output

@@ -18,3 +18,4 @@ accessories:
         - AWS_SECRET_ACCESS_KEY
     volumes:
       - "chatwithwork_storage:/data/storage:ro"
+      - "chatwithwork_backup_state:/var/lib/kamal-backup"

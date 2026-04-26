@@ -1,6 +1,6 @@
 ---
 title: Commands
-description: Command reference for the kamal-backup executable, including Kamal-style destination selection for production-side commands.
+description: Command reference for scheduled backups, restores, drills, checks, evidence, and Kamal-style destination selection.
 nav_order: 1
 ---
 
@@ -35,22 +35,27 @@ kamal-backup schedule
 kamal-backup version
 ```
 
-Use `kamal-backup help`, `kamal-backup help restore`, or `kamal-backup help drill` for task-specific usage.
+Use `kamal-backup help` for the command list. Use command `--help` for task-specific options:
+
+```sh
+kamal-backup restore local --help
+kamal-backup drill production --help
+```
 
 ## Common commands
 
 | Command | Description |
 |---|---|
 | `init` | Create `config/kamal-backup.yml`, then print an accessory snippet for `deploy.yml`. Create `config/kamal-backup.local.yml` only when you need to override Rails local defaults. |
-| `backup` | Create one database backup and one file snapshot for the current app. With `-d` or `-c`, it runs on production infrastructure through Kamal. Remote execution requires the local gem and accessory versions to match. |
-| `restore local [snapshot-or-latest]` | Restore onto your machine: current local database plus current local `BACKUP_PATHS`. Prompts before overwriting local data. With `-d` or `-c`, the source-side defaults come from the production accessory config. |
-| `restore production [snapshot-or-latest]` | Restore back into the live production database and production `BACKUP_PATHS`. Prompts before overwriting production data. With `-d` or `-c`, it shells out through Kamal and requires matching local/remote versions. |
+| `backup` | Create one database backup and one Active Storage file snapshot for the current app. With `-d` or `-c`, it runs on production infrastructure through Kamal. Remote execution requires the local gem and accessory versions to match. |
+| `restore local [snapshot-or-latest]` | Restore onto your machine: current local database plus current local Active Storage path in `BACKUP_PATHS`. Prompts before overwriting local data. With `-d` or `-c`, the source-side defaults come from the production accessory config. |
+| `restore production [snapshot-or-latest]` | Restore back into the live production database and production Active Storage path in `BACKUP_PATHS`. Prompts before overwriting production data. With `-d` or `-c`, it shells out through Kamal and requires matching local/remote versions. |
 | `drill local [snapshot-or-latest]` | Restore onto your machine, optionally run `--check`, print JSON, and store the latest drill record under `KAMAL_BACKUP_STATE_DIR`. With `-d` or `-c`, the source-side defaults come from the production accessory config. |
-| `drill production [snapshot-or-latest]` | Restore into scratch targets on production infrastructure, optionally run `--check`, print JSON, and store the latest drill record. Use `--database` for PostgreSQL/MySQL or `--sqlite-path` for SQLite. Remote execution requires matching local/remote versions. |
+| `drill production [snapshot-or-latest]` | Restore into scratch targets on production infrastructure, optionally run `--check`, print JSON, and store the latest drill record. Use `--database` for PostgreSQL/MySQL or `--sqlite-path` for SQLite. Use `--files` for the scratch Active Storage target; the default is `/restore/files`. Remote execution requires matching local/remote versions. |
 | `list` | Show restic snapshots for the configured app tags. With `-d` or `-c`, it runs through Kamal against the backup accessory and requires matching local/remote versions. |
 | `check` | Run `restic check` and store the latest result under `KAMAL_BACKUP_STATE_DIR`. With `-d` or `-c`, it runs through Kamal against the backup accessory and requires matching local/remote versions. |
 | `evidence` | Print redacted JSON for ops records or security reviews, including latest snapshots, latest check result, latest drill result, retention, and tool versions. With `-d` or `-c`, it runs through Kamal against the backup accessory and requires matching local/remote versions. |
-| `schedule` | Run the foreground scheduler loop. Normally the accessory container runs this by default, but you can also invoke it explicitly through `-d` or `-c` when debugging. Remote execution requires matching local/remote versions. |
+| `schedule` | Run the foreground scheduler loop that performs backups every `BACKUP_SCHEDULE_SECONDS`. Normally the accessory container runs this by default, but you can also invoke it explicitly through `-d` or `-c` when debugging. Remote execution requires matching local/remote versions. |
 | `version` | Print the running `kamal-backup` version. `--version` and `-v` print the local gem version. From an app checkout with `config/deploy.yml`, `version` also prints the accessory version and sync status; `-d` and `-c` still work when you need an explicit Kamal context. |
 
 ## Notes

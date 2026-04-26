@@ -1,14 +1,16 @@
 ---
 title: Configuration
-description: Required environment, optional local config files, restic repository choices, database settings, mounted file paths, retention, and scheduler flags.
+description: Required environment, local config files, restic repository choices, database settings, Active Storage paths, retention, and scheduler flags.
 nav_order: 3
 ---
 
 ## Restic in normal Kamal use
 
-`kamal-backup` uses restic under the hood.
+`kamal-backup` uses restic as the backup engine and repository format.
 
 In the normal Kamal setup, restic runs inside the backup accessory container. You do not install restic on the Rails app host. You only configure a restic repository for the accessory to use.
+
+Restic is used because it gives the accessory encrypted snapshots, repository checks, deduplication, retention/prune support, and portable restores across S3-compatible object storage, restic REST servers, and filesystem repositories.
 
 Repository examples:
 
@@ -28,13 +30,23 @@ DATABASE_ADAPTER=postgres
 RESTIC_REPOSITORY=s3:https://s3.example.com/chatwithwork-backups
 RESTIC_PASSWORD=change-me
 BACKUP_PATHS=/data/storage
+KAMAL_BACKUP_STATE_DIR=/var/lib/kamal-backup
 ```
 
 `BACKUP_PATHS` accepts colon-separated or newline-separated paths. Every configured path must exist before a backup starts.
 
-Use `BACKUP_PATHS` for file data that lives on mounted volumes, such as file-backed Rails Active Storage.
+Use `BACKUP_PATHS` for file-backed Active Storage files on mounted volumes, usually `/data/storage` in a Kamal deployment. Mount the volume read-only for backups when possible.
 
-If your app stores Active Storage blobs directly in S3, there may be no local path to include here.
+If your app stores Active Storage blobs directly in S3, there may be no mounted Active Storage path to include here.
+
+## State directory
+
+`KAMAL_BACKUP_STATE_DIR` stores local operational state for the backup accessory:
+
+- `last_check.json`
+- `last_restore_drill.json`
+
+The default is `/var/lib/kamal-backup`. Mount it as a persistent volume if you want `kamal-backup evidence` to keep reporting the latest check and restore drill after the accessory container is recreated.
 
 ## Database settings
 
@@ -90,7 +102,7 @@ accessory: backup
 For most Rails apps, no second file is needed. `kamal-backup` can infer local-machine targets from Rails conventions:
 
 - the development database from `config/database.yml`
-- the local files path as `storage`
+- the local Active Storage path as `storage`
 - the local state directory as `tmp/kamal-backup`
 
 If your local setup is nonstandard, create `config/kamal-backup.local.yml` and override the inferred targets there:
@@ -113,7 +125,7 @@ When you run `restore local` or `drill local` with `-d` or `-c`, `kamal-backup` 
 - `RESTIC_REPOSITORY`
 - `BACKUP_PATHS`, remapped to `LOCAL_RESTORE_SOURCE_PATHS`
 
-That means the accessory clear env should contain the source-of-truth values for the backup repository and source file paths.
+That means the accessory clear env should contain the source-of-truth values for the backup repository and source Active Storage paths.
 
 Local overrides belong in `config/kamal-backup.local.yml` only when needed:
 
@@ -163,12 +175,17 @@ RESTIC_CHECK_AFTER_BACKUP=false
 RESTIC_CHECK_READ_DATA_SUBSET=5%
 ```
 
+`BACKUP_SCHEDULE_SECONDS` is the main cadence knob. `86400` means daily backups; `3600` means hourly backups. Keep the schedule in the accessory config so the backup behavior is visible alongside the rest of the Kamal deployment.
+
 ## Rare overrides
 
-For local safety guards, a rare override still exists:
+These are for unusual operations and should not be part of normal setup:
 
 ```sh
+KAMAL_BACKUP_CONFIG=config/kamal-backup.custom.yml
 KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true
+KAMAL_BACKUP_ALLOW_IN_PLACE_FILE_RESTORE=true
+KAMAL_BACKUP_ALLOW_SUSPICIOUS_PATHS=true
 ```
 
-That bypasses the guard that refuses production-looking local targets.
+`KAMAL_BACKUP_CONFIG` replaces the default config file search path. The `ALLOW_*` flags bypass safety guards for production-looking restore targets, in-place file restores, or suspicious paths such as `/var`. Prefer explicit scratch targets instead of these overrides.

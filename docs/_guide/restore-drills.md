@@ -1,17 +1,19 @@
 ---
 title: Restore Drills
-description: Practice restores on your laptop or on production infrastructure, run checks, and keep evidence that reads like an operations record instead of a generic backup log.
+description: Practice Rails restores on your laptop or production infrastructure, run checks, and keep evidence for security reviews like CASA.
 nav_order: 5
 ---
 
 `drill` means "restore, check, and record the result."
+
+Scheduled backups answer "did a backup run?" Restore drills answer the more important question: "can this Rails app actually come back from that backup?"
 
 `kamal-backup` has two drill destinations:
 
 - `drill local`: restore onto your machine, run an optional check, and write a drill record
 - `drill production`: restore onto production infrastructure, but into scratch targets, then run an optional check and write a drill record
 
-Every drill writes the latest result to `KAMAL_BACKUP_STATE_DIR/last_restore_drill.json`. `kamal-backup evidence` includes that latest drill record.
+Every drill writes the latest result to `KAMAL_BACKUP_STATE_DIR/last_restore_drill.json`. `kamal-backup evidence` includes that latest drill record. In the accessory container, mount `/var/lib/kamal-backup` as a persistent volume if you want that record to survive accessory replacement.
 
 ## `drill local`
 
@@ -33,7 +35,7 @@ With `-d` or `-c`, `drill local` uses the production accessory config for the so
 And for a normal Rails app it infers the local target side from Rails:
 
 - the development database in `config/database.yml`
-- `storage` as the local files target
+- `storage` as the local Active Storage target
 - `tmp/kamal-backup` as the local drill state directory
 
 You still provide local secrets in env.
@@ -47,7 +49,7 @@ For larger apps, treat `drill local` as a convenience. The main drill should usu
 This is the production-side drill:
 
 - restore the database into a scratch database or scratch SQLite file
-- restore files into a scratch path
+- restore Active Storage files into a scratch path
 - run an optional verification command
 - write the JSON result for evidence
 
@@ -93,7 +95,7 @@ A typical review-friendly cadence is:
 3. a deliberate `drill production`
 4. `evidence`
 
-## What to Keep for CASA or Another Review
+## What to Keep for a Security Review
 
 The drill JSON is the machine-readable record.
 
@@ -107,4 +109,4 @@ The human-readable story should usually say:
 - which verification command ran
 - whether the result looked correct
 
-That is much stronger than saying "the backup job is green."
+That is much stronger than saying "we have backups."
