@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Add one Kamal accessory that runs scheduled Rails backups for your database and file-backed Active Storage files.
+description: Add one Kamal accessory that runs scheduled backups for your database and file-backed Active Storage files.
 nav_order: 1
 ---
 

@@ -8,7 +8,7 @@ nav_order: 2
 
 `kamal-backup` runs as a Kamal accessory. In normal production use, the accessory runs `kamal-backup schedule`, wakes up on the configured interval, and creates one database snapshot plus one Active Storage file snapshot per run.
 
-The goal is simple: scheduled Rails backups that are easy to restore, easy to drill, and easy to explain in a security review.
+The goal is simple: scheduled backups for Rails apps deployed with Kamal that are easy to restore, easy to drill, and easy to explain in a security review.
 
 ## Why restic
 

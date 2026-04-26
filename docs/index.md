@@ -5,7 +5,7 @@ description: "The easiest scheduled backup setup for Rails apps deployed with Ka
 permalink: /
 hero:
   name: kamal-backup
-  text: Scheduled Rails backups for Kamal apps
+  text: Scheduled backups for Rails apps deployed with Kamal
   tagline: Back up PostgreSQL, MySQL, SQLite, and file-backed Active Storage files from one Kamal accessory, then run restore drills and produce evidence for security reviews like CASA.
   actions:
     - theme: brand
@@ -25,7 +25,7 @@ hero:
 features:
   - icon: 🕒
     title: Runs on a Schedule
-    details: Boot the accessory and it runs `kamal-backup schedule` by default. Set `BACKUP_SCHEDULE_SECONDS` and keep daily Rails backups moving without cron glue.
+    details: Boot the accessory and it runs `kamal-backup schedule` by default. Set `BACKUP_SCHEDULE_SECONDS` and keep daily backups moving without cron glue.
   - icon: 🗄️
     title: Databases and Active Storage
     details: Back up PostgreSQL, MySQL/MariaDB, or SQLite with database-native tools, plus file-backed Active Storage files from mounted volumes such as `/data/storage`.

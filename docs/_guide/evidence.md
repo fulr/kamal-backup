@@ -4,7 +4,7 @@ description: Use scheduled backups, restore drills, restic checks, and evidence 
 nav_order: 6
 ---
 
-`kamal-backup evidence` exists for the moment when someone asks, "Show me how Rails backups are configured today, whether they run on a schedule, and whether you have tested restores."
+`kamal-backup evidence` exists for the moment when someone asks, "Show me how this Rails app's backups are configured today, whether they run on a schedule, and whether you have tested restores."
 
 That might be:
 

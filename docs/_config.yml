@@ -1,5 +1,5 @@
 title: kamal-backup
-description: Scheduled Rails backups for Kamal apps, covering databases, file-backed Active Storage, restore drills, and review evidence.
+description: Scheduled backups for Rails apps deployed with Kamal, covering databases, file-backed Active Storage, restore drills, and review evidence.
 lang: en-US
 timezone: Europe/Berlin
 

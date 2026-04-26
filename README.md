@@ -95,7 +95,7 @@ bundle exec kamal-backup -d production evidence
 ## What you get
 
 - **Scheduled backups:** the accessory runs continuously and backs up on `BACKUP_SCHEDULE_SECONDS`.
-- **Rails data coverage:** database dumps plus file-backed Active Storage files from mounted volumes.
+- **Database and Active Storage coverage:** database dumps plus file-backed Active Storage files from mounted volumes.
 - **Restic underneath:** encrypted, deduplicated snapshots in S3-compatible storage, a restic REST server, or a filesystem repository.
 - **Local restores:** pull production backups into your local Rails app when you need to inspect real data.
 - **Restore drills:** restore into scratch production-side targets and record the result.
