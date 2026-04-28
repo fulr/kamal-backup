@@ -27,7 +27,7 @@ class KamalBridgeTest < Minitest::Test
 
       stub_command_capture(KamalBackup::CommandResult.new(stdout: output, stderr: "", status: 0)) do |specs|
         assert_equal "0.1.2", bridge.remote_version(accessory_name: "backup")
-        assert_equal ["kamal", "accessory", "exec", "backup", "kamal-backup version"], specs.first.argv
+        assert_equal ["kamal", "accessory", "exec", "--reuse", "backup", "kamal-backup version"], specs.first.argv
       end
     end
   end
@@ -35,7 +35,7 @@ class KamalBridgeTest < Minitest::Test
   def test_accessory_exec_places_kamal_options_before_remote_command
     output = <<~OUT
       App Host: example.com
-      0.2.4
+      0.2.5
     OUT
     Dir.mktmpdir do |dir|
       bridge = KamalBackup::KamalBridge.new(
@@ -46,7 +46,7 @@ class KamalBridgeTest < Minitest::Test
       )
 
       stub_command_capture(KamalBackup::CommandResult.new(stdout: output, stderr: "", status: 0)) do |specs|
-        assert_equal "0.2.4", bridge.remote_version(accessory_name: "backup")
+        assert_equal "0.2.5", bridge.remote_version(accessory_name: "backup")
         assert_equal [
           "kamal",
           "accessory",
@@ -55,6 +55,7 @@ class KamalBridgeTest < Minitest::Test
           "config/deploy.yml",
           "-d",
           "production",
+          "--reuse",
           "backup",
           "kamal-backup version"
         ], specs.first.argv
@@ -144,7 +145,7 @@ class KamalBridgeTest < Minitest::Test
 
       stub_command_capture(KamalBackup::CommandResult.new(stdout: "0.2.2\n", stderr: "", status: 0)) do |specs|
         assert_equal "0.2.2", bridge.remote_version(accessory_name: "backup")
-        assert_equal ["bin/kamal", "accessory", "exec", "backup", "kamal-backup version"], specs.first.argv
+        assert_equal ["bin/kamal", "accessory", "exec", "--reuse", "backup", "kamal-backup version"], specs.first.argv
       end
     end
   end
@@ -157,7 +158,7 @@ class KamalBridgeTest < Minitest::Test
 
       stub_command_capture(KamalBackup::CommandResult.new(stdout: "0.2.2\n", stderr: "", status: 0)) do |specs|
         assert_equal "0.2.2", bridge.remote_version(accessory_name: "backup")
-        assert_equal ["bundle", "exec", "kamal", "accessory", "exec", "backup", "kamal-backup version"], specs.first.argv
+        assert_equal ["bundle", "exec", "kamal", "accessory", "exec", "--reuse", "backup", "kamal-backup version"], specs.first.argv
       end
     end
   end

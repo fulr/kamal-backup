@@ -174,6 +174,7 @@ module KamalBackup
           "accessory",
           "exec",
           *kamal_option_argv,
+          "--reuse",
           accessory_name,
           command
         ]
