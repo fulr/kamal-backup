@@ -173,9 +173,9 @@ module KamalBackup
           *kamal_command,
           "accessory",
           "exec",
+          *kamal_option_argv,
           accessory_name,
-          command,
-          *kamal_option_argv
+          command
         ]
       end
 

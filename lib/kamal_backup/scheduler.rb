@@ -9,6 +9,9 @@ module KamalBackup
     end
 
     def run
+      $stdout.sync = true
+      $stderr.sync = true
+
       install_signal_handlers
       sleep_interruptibly(@config.backup_start_delay_seconds)
 

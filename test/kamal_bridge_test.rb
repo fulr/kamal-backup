@@ -32,6 +32,36 @@ class KamalBridgeTest < Minitest::Test
     end
   end
 
+  def test_accessory_exec_places_kamal_options_before_remote_command
+    output = <<~OUT
+      App Host: example.com
+      0.2.4
+    OUT
+    Dir.mktmpdir do |dir|
+      bridge = KamalBackup::KamalBridge.new(
+        redactor: KamalBackup::Redactor.new(env: {}),
+        config_file: "config/deploy.yml",
+        destination: "production",
+        cwd: dir
+      )
+
+      stub_command_capture(KamalBackup::CommandResult.new(stdout: output, stderr: "", status: 0)) do |specs|
+        assert_equal "0.2.4", bridge.remote_version(accessory_name: "backup")
+        assert_equal [
+          "kamal",
+          "accessory",
+          "exec",
+          "-c",
+          "config/deploy.yml",
+          "-d",
+          "production",
+          "backup",
+          "kamal-backup version"
+        ], specs.first.argv
+      end
+    end
+  end
+
   def test_accessory_environment_merges_clear_env_and_resolved_secrets
     config_output = <<~YAML
       accessories:
