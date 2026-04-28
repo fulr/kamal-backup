@@ -23,6 +23,7 @@ group :development do
   gem "kamal-backup"
 end
 ```
+{: data-title="Gemfile"}
 
 Then install it and generate the config file:
 
@@ -31,11 +32,7 @@ bundle install
 bundle exec kamal-backup init
 ```
 
-That creates:
-
-- `config/kamal-backup.yml`
-
-Put the production backup settings in that file:
+That creates `config/kamal-backup.yml`. Put the production backup settings in that file:
 
 ```yaml
 accessory: backup
@@ -48,6 +45,7 @@ restic_repository: s3:https://s3.example.com/chatwithwork-backups
 restic_init_if_missing: true
 backup_schedule_seconds: 86400
 ```
+{: data-title="config/kamal-backup.yml"}
 
 For most Rails apps, `restore local` and `drill local` can infer the local development database, the local `storage` path for Active Storage, and `tmp/kamal-backup` without a second file. Only create `config/kamal-backup.local.yml` when your local targets are nonstandard.
 
@@ -84,6 +82,7 @@ accessories:
       - "chatwithwork_storage:/data/storage:ro"
       - "chatwithwork_backup_state:/var/lib/kamal-backup"
 ```
+{: data-title="config/deploy.yml"}
 
 Kamal uploads `config/kamal-backup.yml` and mounts it read-only into the accessory. Secrets still stay in Kamal secrets.
 

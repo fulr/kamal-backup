@@ -44,4 +44,26 @@ class ResticTest < Minitest::Test
     assert_includes restic.last_args, "path:data-storage"
     assert_includes restic.last_args, "path:data-uploads"
   end
+
+  def test_restic_env_includes_yaml_restic_settings
+    Dir.mktmpdir do |dir|
+      config_dir = File.join(dir, "config")
+      FileUtils.mkdir_p(config_dir)
+      File.write(
+        File.join(config_dir, "kamal-backup.yml"),
+        <<~YAML
+          app_name: demo
+          restic_repository: s3:https://s3.example.com/demo
+          restic_password: yaml-secret
+        YAML
+      )
+
+      config = KamalBackup::Config.new(env: {}, cwd: dir, load_project_defaults: false)
+      restic = KamalBackup::Restic.new(config, redactor: KamalBackup::Redactor.new(env: config.env))
+      restic_env = restic.send(:restic_env)
+
+      assert_equal "s3:https://s3.example.com/demo", restic_env.fetch("RESTIC_REPOSITORY")
+      assert_equal "yaml-secret", restic_env.fetch("RESTIC_PASSWORD")
+    end
+  end
 end

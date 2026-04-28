@@ -47,7 +47,7 @@ kamal-backup drill production --help
 
 | Command | Description |
 |---|---|
-| `init` | Create `config/kamal-backup.yml` with the normal YAML-first shape, then print an accessory snippet for `deploy.yml`. Create `config/kamal-backup.local.yml` only when you need to override Rails local defaults. |
+| `init` | Create `config/kamal-backup.yml` with the normal YAML-first shape, then print an accessory snippet to add to `config/deploy.yml`. It does not edit `config/deploy.yml` or create `config/kamal-backup.local.yml`. Create the local file only when you need to override Rails local defaults. |
 | `backup` | Create one database backup and one Active Storage file snapshot for the current app. With `-d` or `-c`, it runs on production infrastructure through Kamal. Remote execution requires the local gem and accessory versions to match. |
 | `restore local [snapshot-or-latest]` | Restore onto your machine: current local database plus current local Active Storage path. Prompts before overwriting local data. With `-d` or `-c`, the source-side defaults come from `config/kamal-backup.yml`. |
 | `restore production [snapshot-or-latest]` | Restore back into the live production database and production Active Storage path from `config/kamal-backup.yml`. Prompts before overwriting production data. With `-d` or `-c`, it shells out through Kamal and requires matching local/remote versions. |

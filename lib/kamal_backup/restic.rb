@@ -6,6 +6,8 @@ require_relative "command"
 
 module KamalBackup
   class Restic
+    RESTIC_ENV_PATTERN = /\A(?:RESTIC_|AWS_|B2_|AZURE_|GOOGLE_|RCLONE_|OS_|ST_|HP_|HTTP_|HTTPS_|NO_PROXY)/i
+
     attr_reader :config, :redactor
 
     def initialize(config, redactor:)
@@ -25,13 +27,19 @@ module KamalBackup
     end
 
     def backup_stream(command, filename:, tags:)
-      restic_command = CommandSpec.new(argv: ["restic", "backup", "--stdin", "--stdin-filename", filename] + tag_args(common_tags + tags))
+      restic_command = CommandSpec.new(
+        argv: ["restic", "backup", "--stdin", "--stdin-filename", filename] + tag_args(common_tags + tags),
+        env: restic_env
+      )
       log("backing up stream as #{filename}")
       pipe_commands(command, restic_command, producer_label: "dump", consumer_label: "restic backup")
     end
 
     def backup_file(path, filename:, tags:)
-      command = CommandSpec.new(argv: ["restic", "backup", "--stdin", "--stdin-filename", filename] + tag_args(common_tags + tags))
+      command = CommandSpec.new(
+        argv: ["restic", "backup", "--stdin", "--stdin-filename", filename] + tag_args(common_tags + tags),
+        env: restic_env
+      )
       log("backing up file content as #{filename}")
 
       File.open(path, "rb") do |file|
@@ -126,12 +134,12 @@ module KamalBackup
     end
 
     def pipe_dump_to_command(snapshot, filename, command)
-      restic_command = CommandSpec.new(argv: ["restic", "dump", snapshot, filename])
+      restic_command = CommandSpec.new(argv: ["restic", "dump", snapshot, filename], env: restic_env)
       pipe_commands(restic_command, command, producer_label: "restic dump", consumer_label: command.argv.first)
     end
 
     def write_dump_to_path(snapshot, filename, target_path)
-      command = CommandSpec.new(argv: ["restic", "dump", snapshot, filename])
+      command = CommandSpec.new(argv: ["restic", "dump", snapshot, filename], env: restic_env)
       target_path = File.expand_path(target_path)
       FileUtils.mkdir_p(File.dirname(target_path))
       temp_path = "#{target_path}.kamal-backup-#{$$}.tmp"
@@ -160,7 +168,7 @@ module KamalBackup
     end
 
     def run(args)
-      Command.capture(CommandSpec.new(argv: ["restic"] + args), redactor: redactor)
+      Command.capture(CommandSpec.new(argv: ["restic"] + args, env: restic_env), redactor: redactor)
     end
 
     def common_tags
@@ -170,6 +178,12 @@ module KamalBackup
     private
       def tag_args(tags)
         tags.compact.each_with_object([]) { |tag, args| args.concat(["--tag", tag]) }
+      end
+
+      def restic_env
+        config.env.each_with_object({}) do |(key, value), env|
+          env[key] = value if key.to_s.match?(RESTIC_ENV_PATTERN)
+        end
       end
 
       def pipe_commands(producer, consumer, producer_label:, consumer_label:)

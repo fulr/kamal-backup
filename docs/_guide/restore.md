@@ -59,6 +59,7 @@ backup_paths:
   - storage
 state_dir: tmp/kamal-backup
 ```
+{: data-title="config/kamal-backup.local.yml"}
 
 If the production Active Storage paths differ from your local Active Storage paths and you are not using `-d` or `-c`, set `LOCAL_RESTORE_SOURCE_PATHS` yourself.
 
