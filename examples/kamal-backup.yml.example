@@ -1,1 +1,9 @@
 accessory: backup
+app_name: chatwithwork
+database_adapter: postgres
+database_url: postgres://chatwithwork@chatwithwork-db:5432/chatwithwork_production
+backup_paths:
+  - /data/storage
+restic_repository: s3:https://s3.example.com/chatwithwork-backups
+restic_init_if_missing: true
+backup_schedule_seconds: 86400

@@ -24,7 +24,7 @@ group :development do
 end
 ```
 
-Then install it and generate the shared config stub:
+Then install it and generate the config file:
 
 ```sh
 bundle install
@@ -35,7 +35,19 @@ That creates:
 
 - `config/kamal-backup.yml`
 
-The shared file is where you name the accessory if it is not called `backup`.
+Put the production backup settings in that file:
+
+```yaml
+accessory: backup
+app_name: chatwithwork
+database_adapter: postgres
+database_url: postgres://chatwithwork@chatwithwork-db:5432/chatwithwork_production
+backup_paths:
+  - /data/storage
+restic_repository: s3:https://s3.example.com/chatwithwork-backups
+restic_init_if_missing: true
+backup_schedule_seconds: 86400
+```
 
 For most Rails apps, `restore local` and `drill local` can infer the local development database, the local `storage` path for Active Storage, and `tmp/kamal-backup` without a second file. Only create `config/kamal-backup.local.yml` when your local targets are nonstandard.
 
@@ -60,15 +72,9 @@ accessories:
   backup:
     image: ghcr.io/crmne/kamal-backup:latest
     host: chatwithwork.com
+    files:
+      - config/kamal-backup.yml:/app/config/kamal-backup.yml:ro
     env:
-      clear:
-        APP_NAME: chatwithwork
-        DATABASE_ADAPTER: postgres
-        DATABASE_URL: postgres://chatwithwork@chatwithwork-db:5432/chatwithwork_production
-        BACKUP_PATHS: /data/storage
-        RESTIC_REPOSITORY: s3:https://s3.example.com/chatwithwork-backups
-        RESTIC_INIT_IF_MISSING: "true"
-        BACKUP_SCHEDULE_SECONDS: "86400"
       secret:
         - PGPASSWORD
         - RESTIC_PASSWORD
@@ -79,16 +85,19 @@ accessories:
       - "chatwithwork_backup_state:/var/lib/kamal-backup"
 ```
 
-That same accessory config becomes the source of truth for production-side commands, and for local restore or local drill when you pass `-d` or `-c`.
+Kamal uploads `config/kamal-backup.yml` and mounts it read-only into the accessory. Secrets still stay in Kamal secrets.
 
 ## 4. Boot the accessory
 
 ```sh
+bundle exec kamal-backup validate
 bin/kamal accessory boot backup
 bin/kamal accessory logs backup
 ```
 
-The container default command is `kamal-backup schedule`, so once the accessory is up it starts running scheduled backups. In the example above, `BACKUP_SCHEDULE_SECONDS=86400` means one backup per day.
+`validate` catches missing required backup settings before the accessory has to be running.
+
+The container default command is `kamal-backup schedule`, so once the accessory is up it starts running scheduled backups. In the example above, `backup_schedule_seconds: 86400` means one backup per day.
 
 The `/var/lib/kamal-backup` volume preserves the latest `check` and restore drill records across accessory reboots. Keep it mounted if you want `kamal-backup evidence` to include recent operational proof after the container is recreated.
 
@@ -118,6 +127,7 @@ The same pattern works for the other production-side commands:
 
 ```sh
 bundle exec kamal-backup -d production check
+bundle exec kamal-backup validate
 bundle exec kamal-backup -d production version
 bundle exec kamal-backup -d production schedule
 ```
@@ -129,7 +139,7 @@ From the app checkout, `kamal-backup version` without `-d` is also a quick diagn
 Each backup run creates:
 
 - one database backup stored through restic stdin;
-- one `type:files` restic snapshot containing the configured file-backed Active Storage paths in `BACKUP_PATHS`.
+- one `type:files` restic snapshot containing the configured file-backed Active Storage paths in `backup_paths`.
 
 Database dump snapshots are tagged with `kamal-backup`, `app:<name>`, `type:database`, `adapter:<adapter>`, and `run:<timestamp>`. Active Storage file snapshots use `type:files`, the same run tag, and informational `path:<label>` tags for the configured paths. Restore selects by `type:files`, not by one path tag.
 

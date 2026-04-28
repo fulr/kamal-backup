@@ -47,6 +47,11 @@ module KamalBackup
       true
     end
 
+    def validate(check_files: true)
+      config.validate_backup(check_files: check_files)
+      true
+    end
+
     def restore_to_local_machine(snapshot = "latest")
       validate_local_machine_restore
       require_restic!

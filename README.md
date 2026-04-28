@@ -44,7 +44,7 @@ group :development do
 end
 ```
 
-Generate the config stub and accessory snippet:
+Generate the config file and accessory snippet:
 
 ```sh
 bundle install
@@ -58,15 +58,9 @@ accessories:
   backup:
     image: ghcr.io/crmne/kamal-backup:latest
     host: chatwithwork.com
+    files:
+      - config/kamal-backup.yml:/app/config/kamal-backup.yml:ro
     env:
-      clear:
-        APP_NAME: chatwithwork
-        DATABASE_ADAPTER: postgres
-        DATABASE_URL: postgres://chatwithwork@chatwithwork-db:5432/chatwithwork_production
-        BACKUP_PATHS: /data/storage
-        RESTIC_REPOSITORY: s3:https://s3.example.com/chatwithwork-backups
-        RESTIC_INIT_IF_MISSING: "true"
-        BACKUP_SCHEDULE_SECONDS: "86400"
       secret:
         - PGPASSWORD
         - RESTIC_PASSWORD
@@ -77,9 +71,24 @@ accessories:
       - "chatwithwork_backup_state:/var/lib/kamal-backup"
 ```
 
+Put the backup settings in `config/kamal-backup.yml`:
+
+```yaml
+accessory: backup
+app_name: chatwithwork
+database_adapter: postgres
+database_url: postgres://chatwithwork@chatwithwork-db:5432/chatwithwork_production
+backup_paths:
+  - /data/storage
+restic_repository: s3:https://s3.example.com/chatwithwork-backups
+restic_init_if_missing: true
+backup_schedule_seconds: 86400
+```
+
 Boot it. The container runs `kamal-backup schedule` by default:
 
 ```sh
+bundle exec kamal-backup validate
 bin/kamal accessory boot backup
 bin/kamal accessory logs backup
 ```
@@ -94,7 +103,7 @@ bundle exec kamal-backup -d production evidence
 
 ## What you get
 
-- **Scheduled backups:** the accessory runs continuously and backs up on `BACKUP_SCHEDULE_SECONDS`.
+- **Scheduled backups:** the accessory runs continuously and backs up on `backup_schedule_seconds`.
 - **Database and Active Storage coverage:** database dumps plus file-backed Active Storage files from mounted volumes.
 - **Restic underneath:** encrypted, deduplicated snapshots in S3-compatible storage, a restic REST server, or a filesystem repository.
 - **Local restores:** pull production backups into your local Rails app when you need to inspect real data.

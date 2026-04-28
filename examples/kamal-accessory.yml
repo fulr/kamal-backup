@@ -2,15 +2,9 @@ accessories:
   backup:
     image: ghcr.io/crmne/kamal-backup:latest
     host: chatwithwork.com
+    files:
+      - config/kamal-backup.yml:/app/config/kamal-backup.yml:ro
     env:
-      clear:
-        APP_NAME: chatwithwork
-        DATABASE_ADAPTER: postgres
-        DATABASE_URL: postgres://chatwithwork@chatwithwork-db:5432/chatwithwork_production
-        BACKUP_PATHS: /data/storage
-        RESTIC_REPOSITORY: s3:https://s3.example.com/chatwithwork-backups
-        RESTIC_INIT_IF_MISSING: "true"
-        BACKUP_SCHEDULE_SECONDS: "86400"
       secret:
         - PGPASSWORD
         - RESTIC_PASSWORD

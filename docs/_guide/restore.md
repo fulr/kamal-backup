@@ -17,12 +17,12 @@ That distinction is strict. `local` means your machine. `production` means the p
 
 This is the fast way to pull a production backup down into local development.
 
-When you pass `-d` or `-c`, `kamal-backup` asks Kamal for the backup accessory config and uses that as the source of truth for:
+When you pass `-d` or `-c`, `kamal-backup` uses `config/kamal-backup.yml` as the production source of truth for:
 
-- `APP_NAME`
-- `DATABASE_ADAPTER`
-- `RESTIC_REPOSITORY`
-- `LOCAL_RESTORE_SOURCE_PATHS` from the accessory `BACKUP_PATHS`
+- `app_name`
+- `database_adapter`
+- `restic_repository`
+- `local_restore_source_paths` from production `backup_paths`
 
 For a normal Rails app, the local targets come from Rails conventions:
 
@@ -34,7 +34,6 @@ You still provide the local secrets yourself in env:
 
 - `RESTIC_PASSWORD`
 - `PGPASSWORD` or `MYSQL_PWD` when needed
-- `RESTIC_REPOSITORY` when it is not visible through `kamal config`
 
 And you need the `restic` binary installed locally and available on `PATH`.
 
@@ -50,7 +49,7 @@ What it does:
 
 - restores the latest database backup into your current local database
 - restores the latest Active Storage file snapshot into a temporary staging directory
-- replaces the local `BACKUP_PATHS` with the restored copy
+- replaces the local backup paths with the restored copy
 
 If your local targets are nonstandard, create `config/kamal-backup.local.yml`:
 
@@ -85,8 +84,8 @@ If you are already inside the accessory container, you can run the command direc
 
 This path uses:
 
-- the accessory's current `DATABASE_URL` or `SQLITE_DATABASE_PATH`
-- the accessory's current `BACKUP_PATHS`
+- the accessory's current `database_url` or `sqlite_database_path`
+- the accessory's current `backup_paths`
 - the same restic repository the scheduled backups use
 
 This is intentionally not a quiet operation. `restore production` is for real incident recovery.

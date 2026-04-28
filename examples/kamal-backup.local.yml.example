@@ -1,9 +1,5 @@
-# When you pass -d/-c, APP_NAME, DATABASE_ADAPTER, RESTIC_REPOSITORY,
-# and source Active Storage paths can come from the Kamal backup accessory.
+# Only needed when local restore targets do not match Rails defaults.
 database_url: postgres://localhost/chatwithwork_development
 backup_paths:
   - storage
-# local_restore_source_paths:
-#   - /data/storage
-# restic_repository: s3:https://s3.example.com/chatwithwork-backups
 state_dir: tmp/kamal-backup

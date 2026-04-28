@@ -4,6 +4,7 @@ require_relative "command"
 module KamalBackup
   class KamalBridge
     DEFAULT_CONFIG_FILE = "config/deploy.yml"
+    VERSION_LINE_PATTERN = /\A\d+(?:\.\d+)+(?:[-.][A-Za-z0-9]+)*\z/
 
     def initialize(redactor:, config_file: nil, destination: nil)
       @redactor = redactor
@@ -42,13 +43,17 @@ module KamalBackup
       end
     end
 
+    def accessory_environment(accessory_name:)
+      accessory_secret_placeholders(accessory_name).merge(accessory_clear_env(accessory_name))
+    end
+
     def execute_on_accessory(accessory_name:, command:)
       capture_kamal(kamal_exec_argv(accessory_name, command))
     end
 
     def remote_version(accessory_name:)
       result = execute_on_accessory(accessory_name: accessory_name, command: "kamal-backup version")
-      version = result.stdout.to_s.strip
+      version = parse_version_line(result.stdout)
 
       if version.empty?
         raise ConfigurationError, "could not determine remote kamal-backup version from accessory #{accessory_name}"
@@ -71,18 +76,41 @@ module KamalBackup
       end
 
       def accessory_clear_env(accessory_name)
-        accessory = accessories.fetch(accessory_name) do
+        normalize_env(fetch(accessory_env(accessory_name), :clear) || {})
+      end
+
+      def accessory_secret_placeholders(accessory_name)
+        normalize_secret_env(fetch(accessory_env(accessory_name), :secret))
+      end
+
+      def accessory_env(accessory_name)
+        fetch(accessory(accessory_name), :env) || {}
+      end
+
+      def accessory(accessory_name)
+        accessories.fetch(accessory_name) do
           accessories.fetch(accessory_name.to_sym) do
             raise ConfigurationError, "accessory #{accessory_name.inspect} is not defined in #{config_file || DEFAULT_CONFIG_FILE}"
           end
         end
-
-        normalize_env(fetch(fetch(accessory, :env) || {}, :clear) || {})
       end
 
       def normalize_env(values)
         values.each_with_object({}) do |(key, value), env|
           env[key.to_s] = value.to_s
+        end
+      end
+
+      def normalize_secret_env(values)
+        case values
+        when Hash
+          values.each_with_object({}) { |(key, _value), env| env[key.to_s] = "configured" }
+        when Array
+          values.each_with_object({}) { |key, env| env[key.to_s] = "configured" }
+        when String, Symbol
+          { values.to_s => "configured" }
+        else
+          {}
         end
       end
 
@@ -126,6 +154,10 @@ module KamalBackup
         else
           Command.capture(spec, redactor: @redactor)
         end
+      end
+
+      def parse_version_line(output)
+        output.to_s.lines.map(&:strip).reverse.find { |line| line.match?(VERSION_LINE_PATTERN) }.to_s
       end
   end
 end

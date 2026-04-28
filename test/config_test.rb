@@ -54,6 +54,61 @@ class ConfigTest < Minitest::Test
     end
   end
 
+  def test_loads_restic_repository_and_password_sources_from_yaml
+    Dir.mktmpdir do |dir|
+      password_file = File.join(dir, "restic-password")
+      repository_file = File.join(dir, "restic-repository")
+      File.write(password_file, "secret")
+      File.write(repository_file, "/tmp/restic")
+      config_dir = File.join(dir, "config")
+      FileUtils.mkdir_p(config_dir)
+      File.write(
+        File.join(config_dir, "kamal-backup.yml"),
+        <<~YAML
+          app_name: file-app
+          restic_repository_file: #{repository_file}
+          restic_password_file: #{password_file}
+        YAML
+      )
+
+      config = KamalBackup::Config.new(env: {}, cwd: dir)
+
+      assert_equal repository_file, config.restic_repository_file
+      assert_equal password_file, config.restic_password_file
+      config.validate_restic
+    end
+  end
+
+  def test_restic_password_command_satisfies_password_validation
+    config = KamalBackup::Config.new(env: {
+      "APP_NAME" => "test-app",
+      "RESTIC_REPOSITORY" => "/tmp/restic-repo",
+      "RESTIC_PASSWORD_COMMAND" => "pass show restic/test-app"
+    })
+
+    config.validate_restic
+  end
+
+  def test_restic_validation_accepts_missing_remote_files_when_file_checks_are_disabled
+    config = KamalBackup::Config.new(env: {
+      "APP_NAME" => "test-app",
+      "RESTIC_REPOSITORY_FILE" => "/remote/restic-repository",
+      "RESTIC_PASSWORD_FILE" => "/remote/restic-password"
+    })
+
+    config.validate_restic(check_files: false)
+  end
+
+  def test_restic_validation_rejects_missing_password_sources
+    config = KamalBackup::Config.new(env: {
+      "APP_NAME" => "test-app",
+      "RESTIC_REPOSITORY" => "/tmp/restic-repo"
+    })
+
+    error = assert_raises(KamalBackup::ConfigurationError) { config.validate_restic }
+    assert_match(/RESTIC_PASSWORD, RESTIC_PASSWORD_FILE, or RESTIC_PASSWORD_COMMAND is required/, error.message)
+  end
+
   def test_environment_overrides_local_yaml_config
     Dir.mktmpdir do |dir|
       config_dir = File.join(dir, "config")
@@ -171,6 +226,16 @@ class ConfigTest < Minitest::Test
 
       config.validate_backup_paths
     end
+  end
+
+  def test_remote_backup_validation_skips_local_path_existence_checks
+    config = KamalBackup::Config.new(env: base_env(
+      "DATABASE_ADAPTER" => "sqlite",
+      "SQLITE_DATABASE_PATH" => "/remote/db/production.sqlite3",
+      "BACKUP_PATHS" => "/remote/storage"
+    ))
+
+    config.validate_backup(check_files: false)
   end
 
   def test_refuses_production_like_restore_target

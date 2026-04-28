@@ -25,12 +25,12 @@ bundle exec kamal-backup -d production drill local latest --check "bin/rails run
 
 This runs on your machine, so it also requires a local `restic` install on `PATH`.
 
-With `-d` or `-c`, `drill local` uses the production accessory config for the source side:
+With `-d` or `-c`, `drill local` uses `config/kamal-backup.yml` for the source side:
 
-- `APP_NAME`
-- `DATABASE_ADAPTER`
-- `RESTIC_REPOSITORY`
-- `LOCAL_RESTORE_SOURCE_PATHS`
+- `app_name`
+- `database_adapter`
+- `restic_repository`
+- source paths from production `backup_paths`
 
 And for a normal Rails app it infers the local target side from Rails:
 

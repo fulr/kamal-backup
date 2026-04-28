@@ -37,11 +37,11 @@ If you choose a `rest:` repository, `kamal-backup` does not install or run that 
 
 When a backup run starts, `kamal-backup` does five things:
 
-1. It validates the app name, restic repository, database settings, and `BACKUP_PATHS`.
+1. It validates the app name, restic repository, database settings, and `backup_paths`.
 2. It creates a database backup using the database-native export tool:
    PostgreSQL uses `pg_dump`, MySQL/MariaDB use `mariadb-dump` or `mysqldump`, and SQLite uses `sqlite3 .backup`.
 3. It streams that database backup into restic and tags it with `type:database`, `adapter:<adapter>`, and `run:<timestamp>`.
-4. It runs one `restic backup` for the configured Active Storage paths in `BACKUP_PATHS` and tags that snapshot with `type:files` plus the same `run:<timestamp>`.
+4. It runs one `restic backup` for the configured Active Storage paths in `backup_paths` and tags that snapshot with `type:files` plus the same `run:<timestamp>`.
 5. It optionally runs `restic forget --prune` and `restic check`, depending on configuration.
 
 The result is one database snapshot and one Active Storage file snapshot per run.
@@ -53,7 +53,7 @@ The result is one database snapshot and one Active Storage file snapshot per run
 - your app database: PostgreSQL, MySQL/MariaDB, or SQLite;
 - file-backed Active Storage files that live on mounted volumes.
 
-If your Rails app already stores Active Storage blobs directly in S3, there may be no mounted Active Storage path for `BACKUP_PATHS` to capture. In that case, `kamal-backup` still covers the database side, but S3 object backup and retention are a separate concern.
+If your Rails app already stores Active Storage blobs directly in S3, there may be no mounted Active Storage path for `backup_paths` to capture. In that case, `kamal-backup` still covers the database side, but S3 object backup and retention are a separate concern.
 
 ## What the commands mean
 
@@ -66,6 +66,7 @@ If your Rails app already stores Active Storage blobs directly in S3, there may 
 - `list`: Show restic snapshots for this app so you can see recent runs and snapshot IDs.
 - `check`: Run `restic check` and store the latest result in `KAMAL_BACKUP_STATE_DIR`, which defaults to `/var/lib/kamal-backup`.
 - `evidence`: Print a redacted JSON summary with current backup settings, latest snapshots, latest check result, latest drill result, and tool versions. This is meant to be attached to internal ops records or security reviews.
+- `validate`: Check required backup configuration without running a backup. From an app checkout with `config/deploy.yml`, it validates the backup accessory and `config/kamal-backup.yml` before the accessory has to be running.
 
 ## Snapshot tags
 

@@ -33,8 +33,30 @@ module KamalBackup
 
       def local_command_config
         @local_command_config ||= begin
-          defaults = deployment_mode? ? bridge.local_restore_defaults(accessory_name: accessory_name) : {}
-          Config.new(env: command_env, defaults: defaults)
+          if deployment_mode?
+            Config.new(
+              env: command_env,
+              defaults: production_source_defaults,
+              config_paths: [Config::LOCAL_CONFIG_PATH]
+            )
+          else
+            Config.new(env: command_env)
+          end
+        end
+      end
+
+      def production_source_defaults
+        shared_config_source_defaults.merge(bridge.local_restore_defaults(accessory_name: accessory_name))
+      end
+
+      def shared_config_source_defaults
+        config = Config.new(env: {}, config_paths: [Config::SHARED_CONFIG_PATH], load_project_defaults: false)
+
+        {}.tap do |defaults|
+          defaults["APP_NAME"] = config.app_name if config.app_name
+          defaults["DATABASE_ADAPTER"] = config.database_adapter if config.database_adapter
+          defaults["RESTIC_REPOSITORY"] = config.restic_repository if config.restic_repository
+          defaults["LOCAL_RESTORE_SOURCE_PATHS"] = config.backup_paths.join("\n") if config.backup_paths.any?
         end
       end
 
@@ -55,6 +77,10 @@ module KamalBackup
       end
 
       def version_remote_mode?
+        deployment_mode? || default_deploy_config?
+      end
+
+      def validate_deploy_mode?
         deployment_mode? || default_deploy_config?
       end
 
@@ -103,6 +129,15 @@ module KamalBackup
         puts("fix: #{accessory_reboot_command}") if status == "out of sync"
       end
 
+      def validate_deploy_config
+        config = Config.new(
+          env: bridge.accessory_environment(accessory_name: accessory_name),
+          config_paths: [Config::SHARED_CONFIG_PATH],
+          load_project_defaults: false
+        )
+        config.validate_backup(check_files: false)
+      end
+
       def confirm!(message)
         return if options[:yes]
 
@@ -149,9 +184,15 @@ module KamalBackup
 
       def shared_config_template
         <<~YAML
-          # Shared defaults for kamal-backup in this app.
-          # Set this when your accessory is not named "backup".
           accessory: backup
+          app_name: your-app
+          database_adapter: postgres
+          database_url: postgres://your-app@your-db:5432/your_app_production
+          backup_paths:
+            - /data/storage
+          restic_repository: s3:https://s3.example.com/your-app-backups
+          restic_init_if_missing: true
+          backup_schedule_seconds: 86400
         YAML
       end
 
@@ -161,15 +202,9 @@ module KamalBackup
             backup:
               image: ghcr.io/crmne/kamal-backup:#{VERSION}
               host: your-server.example.com
+              files:
+                - config/kamal-backup.yml:/app/config/kamal-backup.yml:ro
               env:
-                clear:
-                  APP_NAME: your-app
-                  DATABASE_ADAPTER: postgres
-                  DATABASE_URL: postgres://your-app@your-db:5432/your_app_production
-                  BACKUP_PATHS: /data/storage
-                  RESTIC_REPOSITORY: s3:https://s3.example.com/your-app-backups
-                  RESTIC_INIT_IF_MISSING: "true"
-                  BACKUP_SCHEDULE_SECONDS: "86400"
                 secret:
                   - PGPASSWORD
                   - RESTIC_PASSWORD
@@ -360,6 +395,17 @@ module KamalBackup
       end
     end
 
+    desc "validate", "Validate backup configuration without running a backup"
+    def validate
+      if validate_deploy_mode?
+        validate_deploy_config
+      else
+        direct_app.validate
+      end
+
+      puts("ok")
+    end
+
     desc "init", "Create config and print the scheduled backup accessory snippet"
     def init
       write_init_file(shared_config_path, shared_config_template)
@@ -369,7 +415,7 @@ module KamalBackup
       puts
       puts deploy_snippet
       puts
-      puts "The accessory runs scheduled database and Active Storage backups with BACKUP_SCHEDULE_SECONDS."
+      puts "The accessory runs scheduled database and Active Storage backups with backup_schedule_seconds."
       puts "For most Rails apps, restore local and drill local can infer the development database, Active Storage path, and tmp state directory."
       puts "Local restore and drill also require the restic binary on your machine."
       puts "Create config/kamal-backup.local.yml only if you need to override those local defaults."

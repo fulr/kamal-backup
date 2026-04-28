@@ -14,7 +14,9 @@ module KamalBackup
     }.freeze
 
     SUSPICIOUS_BACKUP_PATHS = %w[/ /var /etc /root /usr /bin /sbin /boot /dev /proc /sys /run].freeze
-    DEFAULT_CONFIG_PATHS = %w[config/kamal-backup.yml config/kamal-backup.local.yml].freeze
+    SHARED_CONFIG_PATH = "config/kamal-backup.yml"
+    LOCAL_CONFIG_PATH = "config/kamal-backup.local.yml"
+    DEFAULT_CONFIG_PATHS = [SHARED_CONFIG_PATH, LOCAL_CONFIG_PATH].freeze
     YAML_KEY_ALIASES = {
       "app_name" => "APP_NAME",
       "database_adapter" => "DATABASE_ADAPTER",
@@ -24,7 +26,10 @@ module KamalBackup
       "local_restore_source_paths" => "LOCAL_RESTORE_SOURCE_PATHS",
       "accessory" => "KAMAL_BACKUP_ACCESSORY",
       "restic_repository" => "RESTIC_REPOSITORY",
+      "restic_repository_file" => "RESTIC_REPOSITORY_FILE",
       "restic_password" => "RESTIC_PASSWORD",
+      "restic_password_file" => "RESTIC_PASSWORD_FILE",
+      "restic_password_command" => "RESTIC_PASSWORD_COMMAND",
       "restic_init_if_missing" => "RESTIC_INIT_IF_MISSING",
       "restic_check_after_backup" => "RESTIC_CHECK_AFTER_BACKUP",
       "restic_check_read_data_subset" => "RESTIC_CHECK_READ_DATA_SUBSET",
@@ -45,9 +50,10 @@ module KamalBackup
 
     attr_reader :env
 
-    def initialize(env: ENV, cwd: Dir.pwd, defaults: {})
+    def initialize(env: ENV, cwd: Dir.pwd, defaults: {}, config_paths: nil, load_project_defaults: true)
       raw_env = env.to_h
-      @env = project_defaults(cwd: cwd).merge(defaults.to_h).merge(load_config_files(raw_env, cwd: cwd)).merge(raw_env)
+      base = load_project_defaults ? project_defaults(cwd: cwd) : {}
+      @env = base.merge(defaults.to_h).merge(load_config_files(raw_env, cwd: cwd, paths: config_paths)).merge(raw_env)
     end
 
     def app_name
@@ -66,8 +72,20 @@ module KamalBackup
       value("RESTIC_REPOSITORY")
     end
 
+    def restic_repository_file
+      value("RESTIC_REPOSITORY_FILE")
+    end
+
     def restic_password
       value("RESTIC_PASSWORD")
+    end
+
+    def restic_password_file
+      value("RESTIC_PASSWORD_FILE")
+    end
+
+    def restic_password_command
+      value("RESTIC_PASSWORD_COMMAND")
     end
 
     def restic_init_if_missing?
@@ -176,16 +194,16 @@ module KamalBackup
       end
     end
 
-    def validate_restic
+    def validate_restic(check_files: true)
       required_app_name
-      required_value("RESTIC_REPOSITORY")
-      required_value("RESTIC_PASSWORD")
+      validate_restic_repository(check_files: check_files)
+      validate_restic_password(check_files: check_files)
     end
 
-    def validate_backup
-      validate_restic
-      validate_database_backup
-      validate_backup_paths
+    def validate_backup(check_files: true)
+      validate_restic(check_files: check_files)
+      validate_database_backup(check_files: check_files)
+      validate_backup_paths(check_files: check_files)
     end
 
     def validate_local_machine_restore
@@ -193,7 +211,7 @@ module KamalBackup
       validate_local_machine_paths
     end
 
-    def validate_database_backup
+    def validate_database_backup(check_files: true)
       case database_adapter
       when "postgres"
         unless value("DATABASE_URL") || value("PGDATABASE")
@@ -205,13 +223,13 @@ module KamalBackup
         end
       when "sqlite"
         path = required_value("SQLITE_DATABASE_PATH")
-        raise ConfigurationError, "SQLITE_DATABASE_PATH does not exist: #{path}" unless File.file?(path)
+        raise ConfigurationError, "SQLITE_DATABASE_PATH does not exist: #{path}" if check_files && !File.file?(path)
       else
         raise ConfigurationError, "DATABASE_ADAPTER is required or must be detectable from DATABASE_URL/SQLITE_DATABASE_PATH"
       end
     end
 
-    def validate_backup_paths
+    def validate_backup_paths(check_files: true)
       paths = backup_paths
       raise ConfigurationError, "BACKUP_PATHS must contain at least one path" if paths.empty?
 
@@ -220,7 +238,7 @@ module KamalBackup
         if SUSPICIOUS_BACKUP_PATHS.include?(expanded) && !allow_suspicious_backup_paths?
           raise ConfigurationError, "refusing suspicious backup path #{expanded}; set KAMAL_BACKUP_ALLOW_SUSPICIOUS_PATHS=true to override"
         end
-        raise ConfigurationError, "backup path does not exist: #{path}" unless File.exist?(path)
+        raise ConfigurationError, "backup path does not exist: #{path}" if check_files && !File.exist?(path)
       end
     end
 
@@ -288,20 +306,46 @@ module KamalBackup
         RailsApp.new(cwd: cwd).defaults
       end
 
-      def load_config_files(raw_env, cwd:)
-        config_paths(raw_env, cwd: cwd).each_with_object({}) do |path, merged|
+      def load_config_files(raw_env, cwd:, paths:)
+        config_paths(raw_env, cwd: cwd, paths: paths).each_with_object({}) do |path, merged|
           next unless File.file?(path)
 
           merged.merge!(normalize_config_file(path))
         end
       end
 
-      def config_paths(raw_env, cwd:)
-        if explicit = raw_env["KAMAL_BACKUP_CONFIG"]
+      def config_paths(raw_env, cwd:, paths:)
+        if paths
+          Array(paths).map { |path| File.expand_path(path, cwd) }
+        elsif explicit = raw_env["KAMAL_BACKUP_CONFIG"]
           [File.expand_path(explicit, cwd)]
         else
           DEFAULT_CONFIG_PATHS.map { |relative| File.expand_path(relative, cwd) }
         end
+      end
+
+      def validate_restic_repository(check_files:)
+        return if restic_repository
+
+        if path = restic_repository_file
+          raise ConfigurationError, "RESTIC_REPOSITORY_FILE does not exist: #{path}" if check_files && !File.file?(path)
+
+          return
+        end
+
+        raise ConfigurationError, "RESTIC_REPOSITORY or RESTIC_REPOSITORY_FILE is required"
+      end
+
+      def validate_restic_password(check_files:)
+        return if restic_password || restic_password_command
+
+        if path = restic_password_file
+          raise ConfigurationError, "RESTIC_PASSWORD_FILE does not exist: #{path}" if check_files && !File.file?(path)
+
+          return
+        end
+
+        raise ConfigurationError, "RESTIC_PASSWORD, RESTIC_PASSWORD_FILE, or RESTIC_PASSWORD_COMMAND is required"
       end
 
       def normalize_config_file(path)
