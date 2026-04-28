@@ -64,7 +64,8 @@ module KamalBackup
         @bridge ||= KamalBridge.new(
           redactor: redactor,
           config_file: options[:config_file],
-          destination: options[:destination]
+          destination: options[:destination],
+          env: command_env
         )
       end
 

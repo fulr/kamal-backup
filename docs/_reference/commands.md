@@ -65,7 +65,7 @@ kamal-backup drill production --help
 - `local` always means your machine, not "whatever environment the command is running in."
 - `restore local` and `drill local` require `restic` on your machine.
 - `production` means the production-side accessory context.
-- `validate` is a preflight check. It cannot prove that server-only files exist or that secret values are populated, but it catches missing required accessory settings before boot.
+- `validate` is a preflight check. It cannot prove that server-only files exist, but it catches missing required accessory settings and required Kamal secrets that resolve to empty values before boot.
 - Remote-backed commands fail fast when the local gem version and accessory version drift. The fix is `bin/kamal accessory reboot backup`.
 - `drill production` restores into scratch targets on production infrastructure. It does not touch the live production database.
 - Destructive restore commands prompt by default. Add `--yes` for automation.

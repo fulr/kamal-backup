@@ -7,7 +7,7 @@ class KamalBridgeTest < Minitest::Test
 
     KamalBackup::Command.define_singleton_method(:capture) do |spec, **_kwargs|
       specs << spec
-      result
+      result.respond_to?(:call) ? result.call(spec) : result
     end
 
     yield(specs)
@@ -30,8 +30,8 @@ class KamalBridgeTest < Minitest::Test
     end
   end
 
-  def test_accessory_environment_merges_clear_env_and_secret_placeholders
-    output = <<~YAML
+  def test_accessory_environment_merges_clear_env_and_resolved_secrets
+    config_output = <<~YAML
       accessories:
         backup:
           env:
@@ -41,16 +41,59 @@ class KamalBridgeTest < Minitest::Test
             secret:
               - RESTIC_PASSWORD
               - AWS_ACCESS_KEY_ID
+              - PGPASSWORD:POSTGRES_PASSWORD
     YAML
+    secret_output = <<~SECRETS
+      RESTIC_PASSWORD=secret
+      AWS_ACCESS_KEY_ID=key
+      POSTGRES_PASSWORD=postgres-secret
+    SECRETS
     bridge = KamalBackup::KamalBridge.new(redactor: KamalBackup::Redactor.new(env: {}))
 
-    stub_command_capture(KamalBackup::CommandResult.new(stdout: output, stderr: "", status: 0)) do
+    stub_command_capture(proc do |spec|
+      case spec.argv
+      when ["kamal", "config", "--version", "latest"]
+        KamalBackup::CommandResult.new(stdout: config_output, stderr: "", status: 0)
+      when ["kamal", "secrets", "print"]
+        KamalBackup::CommandResult.new(stdout: secret_output, stderr: "", status: 0)
+      else
+        raise "unexpected command: #{spec.argv.inspect}"
+      end
+    end) do
       env = bridge.accessory_environment(accessory_name: "backup")
 
       assert_equal "chatwithwork", env.fetch("APP_NAME")
       assert_equal "/var/lib/kamal-backup/restic-repository", env.fetch("RESTIC_REPOSITORY_FILE")
-      assert_equal "configured", env.fetch("RESTIC_PASSWORD")
-      assert_equal "configured", env.fetch("AWS_ACCESS_KEY_ID")
+      assert_equal "secret", env.fetch("RESTIC_PASSWORD")
+      assert_equal "key", env.fetch("AWS_ACCESS_KEY_ID")
+      assert_equal "postgres-secret", env.fetch("PGPASSWORD")
+    end
+  end
+
+  def test_accessory_environment_omits_empty_resolved_secrets
+    config_output = <<~YAML
+      accessories:
+        backup:
+          env:
+            secret:
+              - RESTIC_PASSWORD
+    YAML
+    secret_output = "RESTIC_PASSWORD=\n"
+    bridge = KamalBackup::KamalBridge.new(redactor: KamalBackup::Redactor.new(env: {}))
+
+    stub_command_capture(proc do |spec|
+      case spec.argv
+      when ["kamal", "config", "--version", "latest"]
+        KamalBackup::CommandResult.new(stdout: config_output, stderr: "", status: 0)
+      when ["kamal", "secrets", "print"]
+        KamalBackup::CommandResult.new(stdout: secret_output, stderr: "", status: 0)
+      else
+        raise "unexpected command: #{spec.argv.inspect}"
+      end
+    end) do
+      env = bridge.accessory_environment(accessory_name: "backup")
+
+      refute env.key?("RESTIC_PASSWORD")
     end
   end
 end

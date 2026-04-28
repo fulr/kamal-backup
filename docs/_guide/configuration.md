@@ -118,7 +118,7 @@ Run this before booting or rebooting the accessory:
 bundle exec kamal-backup validate
 ```
 
-With a normal `config/deploy.yml`, `validate` checks the backup accessory config before the accessory has to be running. It catches missing app, database, restic, and backup path settings early.
+With a normal `config/deploy.yml`, `validate` checks the backup accessory config before the accessory has to be running. It catches missing app, database, restic, backup path settings, and required Kamal secrets that resolve to empty values.
 
 ## Local Restores
 

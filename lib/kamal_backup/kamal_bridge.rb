@@ -6,10 +6,11 @@ module KamalBackup
     DEFAULT_CONFIG_FILE = "config/deploy.yml"
     VERSION_LINE_PATTERN = /\A\d+(?:\.\d+)+(?:[-.][A-Za-z0-9]+)*\z/
 
-    def initialize(redactor:, config_file: nil, destination: nil)
+    def initialize(redactor:, config_file: nil, destination: nil, env: ENV)
       @redactor = redactor
       @config_file = config_file
       @destination = destination
+      @env = env
     end
 
     def accessory_name(preferred: nil)
@@ -104,13 +105,51 @@ module KamalBackup
       def normalize_secret_env(values)
         case values
         when Hash
-          values.each_with_object({}) { |(key, _value), env| env[key.to_s] = "configured" }
+          values.each_with_object({}) do |(key, secret_key), env|
+            add_resolved_secret(env, target: key, source: secret_key)
+          end
         when Array
-          values.each_with_object({}) { |key, env| env[key.to_s] = "configured" }
+          values.each_with_object({}) do |entry, env|
+            target, source = parse_secret_entry(entry)
+            add_resolved_secret(env, target: target, source: source)
+          end
         when String, Symbol
-          { values.to_s => "configured" }
+          {}.tap do |env|
+            target, source = parse_secret_entry(values)
+            add_resolved_secret(env, target: target, source: source)
+          end
         else
           {}
+        end
+      end
+
+      def parse_secret_entry(entry)
+        target, source = entry.to_s.split(":", 2)
+        [ target, source || target ]
+      end
+
+      def add_resolved_secret(env, target:, source:)
+        if value = resolved_secret(source)
+          env[target.to_s] = value
+        end
+      end
+
+      def resolved_secret(key)
+        raw = resolved_secrets[key.to_s] || @env[key.to_s]
+        value = raw.to_s.strip
+        value.empty? ? nil : value
+      end
+
+      def resolved_secrets
+        @resolved_secrets ||= parse_secret_output(capture_kamal(kamal_secrets_print_argv).stdout)
+      end
+
+      def parse_secret_output(output)
+        output.to_s.lines.each_with_object({}) do |line, secrets|
+          key, value = line.chomp.split("=", 2)
+          next if key.to_s.empty?
+
+          secrets[key] = value.to_s
         end
       end
 
@@ -135,6 +174,15 @@ module KamalBackup
           "exec",
           accessory_name,
           command,
+          *kamal_option_argv
+        ]
+      end
+
+      def kamal_secrets_print_argv
+        [
+          "kamal",
+          "secrets",
+          "print",
           *kamal_option_argv
         ]
       end
