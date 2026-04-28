@@ -111,12 +111,12 @@ bin/kamal accessory reboot backup
 From your app checkout, use the gem and let it shell out through Kamal:
 
 ```sh
-bundle exec kamal-backup -d production backup
-bundle exec kamal-backup -d production list
-bundle exec kamal-backup -d production evidence
+bundle exec kamal-backup backup
+bundle exec kamal-backup list
+bundle exec kamal-backup evidence
 ```
 
-If you keep multiple deploy configs, pass `-c` the same way Kamal does:
+With the default `config/deploy.yml`, `backup`, `list`, `check`, `evidence`, `validate`, and `version` infer the backup accessory. If you keep multiple deploy configs or destinations, pass `-c` or `-d` the same way Kamal does:
 
 ```sh
 bundle exec kamal-backup -c config/deploy.staging.yml -d staging backup
@@ -125,13 +125,13 @@ bundle exec kamal-backup -c config/deploy.staging.yml -d staging backup
 The same pattern works for the other production-side commands:
 
 ```sh
-bundle exec kamal-backup -d production check
+bundle exec kamal-backup check
 bundle exec kamal-backup validate
-bundle exec kamal-backup -d production version
+bundle exec kamal-backup version
 bundle exec kamal-backup -d production schedule
 ```
 
-From the app checkout, `kamal-backup version` without `-d` is also a quick diagnostic: it reads `config/deploy.yml`, checks the backup accessory version, and tells you whether the local gem and remote accessory are in sync.
+`kamal-backup version` is a quick diagnostic: it reads `config/deploy.yml`, checks the backup accessory version, and tells you whether the local gem and remote accessory are in sync.
 
 ## What the first backup creates
 

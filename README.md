@@ -93,12 +93,12 @@ bin/kamal accessory boot backup
 bin/kamal accessory logs backup
 ```
 
-Run the first backup and print evidence:
+Run the first backup and print evidence. From an app checkout with `config/deploy.yml`, these commands shell out through Kamal to the backup accessory:
 
 ```sh
-bundle exec kamal-backup -d production backup
-bundle exec kamal-backup -d production list
-bundle exec kamal-backup -d production evidence
+bundle exec kamal-backup backup
+bundle exec kamal-backup list
+bundle exec kamal-backup evidence
 ```
 
 ## What you get

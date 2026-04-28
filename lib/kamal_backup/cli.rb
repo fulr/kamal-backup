@@ -77,11 +77,7 @@ module KamalBackup
         File.file?(File.expand_path(KamalBridge::DEFAULT_CONFIG_FILE))
       end
 
-      def version_remote_mode?
-        deployment_mode? || default_deploy_config?
-      end
-
-      def validate_deploy_mode?
+      def remote_command_mode?
         deployment_mode? || default_deploy_config?
       end
 
@@ -362,7 +358,7 @@ module KamalBackup
 
     desc "backup", "Run one database and Active Storage backup immediately"
     def backup
-      if deployment_mode?
+      if remote_command_mode?
         exec_remote(["kamal-backup", "backup"])
       else
         direct_app.backup
@@ -371,7 +367,7 @@ module KamalBackup
 
     desc "list", "List matching restic snapshots"
     def list
-      if deployment_mode?
+      if remote_command_mode?
         exec_remote(["kamal-backup", "list"])
       else
         puts(direct_app.snapshots)
@@ -380,7 +376,7 @@ module KamalBackup
 
     desc "check", "Run restic check and record the latest result"
     def check
-      if deployment_mode?
+      if remote_command_mode?
         exec_remote(["kamal-backup", "check"])
       else
         puts(direct_app.check)
@@ -389,7 +385,7 @@ module KamalBackup
 
     desc "evidence", "Print redacted backup, check, and restore-drill evidence as JSON"
     def evidence
-      if deployment_mode?
+      if remote_command_mode?
         exec_remote(["kamal-backup", "evidence"])
       else
         puts(direct_app.evidence)
@@ -398,7 +394,7 @@ module KamalBackup
 
     desc "validate", "Validate backup configuration without running a backup"
     def validate
-      if validate_deploy_mode?
+      if remote_command_mode?
         validate_deploy_config
       else
         direct_app.validate
@@ -433,7 +429,7 @@ module KamalBackup
 
     desc "version", "Print the running kamal-backup version"
     def version
-      if version_remote_mode?
+      if remote_command_mode?
         print_remote_version_status
       else
         puts(VERSION)

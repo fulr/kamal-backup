@@ -241,6 +241,50 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_remote_commands_without_destination_use_default_deploy_config_when_present
+    commands = {
+      ["backup"] => "kamal-backup backup",
+      ["list"] => "kamal-backup list",
+      ["check"] => "kamal-backup check",
+      ["evidence"] => "kamal-backup evidence"
+    }
+
+    commands.each do |argv, expected_command|
+      fake_bridge = Object.new
+      calls = []
+
+      fake_bridge.define_singleton_method(:accessory_name) { |preferred:| "backup" }
+      fake_bridge.define_singleton_method(:remote_version) do |accessory_name:|
+        calls << { accessory_name: accessory_name, command: "kamal-backup version" }
+        KamalBackup::VERSION
+      end
+      fake_bridge.define_singleton_method(:execute_on_accessory) do |accessory_name:, command:|
+        calls << { accessory_name: accessory_name, command: command }
+        KamalBackup::CommandResult.new(stdout: "remote #{argv.first}\n", stderr: "", status: 0)
+      end
+
+      Dir.mktmpdir do |dir|
+        config_dir = File.join(dir, "config")
+        FileUtils.mkdir_p(config_dir)
+        File.write(File.join(config_dir, "deploy.yml"), "accessories: {}\n")
+
+        out, _ = Dir.chdir(dir) do
+          capture_io do
+            with_fake_bridge(fake_bridge) do
+              KamalBackup::CLI.start(argv, env: {})
+            end
+          end
+        end
+
+        assert_equal [
+          { accessory_name: "backup", command: "kamal-backup version" },
+          { accessory_name: "backup", command: expected_command }
+        ], calls
+        assert_equal "remote #{argv.first}\n", out
+      end
+    end
+  end
+
   def test_validate_with_destination_checks_rendered_accessory_config_without_remote_exec
     fake_bridge = Object.new
     calls = []
