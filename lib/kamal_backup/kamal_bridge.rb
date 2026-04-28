@@ -6,11 +6,12 @@ module KamalBackup
     DEFAULT_CONFIG_FILE = "config/deploy.yml"
     VERSION_LINE_PATTERN = /\A\d+(?:\.\d+)+(?:[-.][A-Za-z0-9]+)*\z/
 
-    def initialize(redactor:, config_file: nil, destination: nil, env: ENV)
+    def initialize(redactor:, config_file: nil, destination: nil, env: ENV, cwd: Dir.pwd)
       @redactor = redactor
       @config_file = config_file
       @destination = destination
       @env = env
+      @cwd = cwd
     end
 
     def accessory_name(preferred: nil)
@@ -159,7 +160,7 @@ module KamalBackup
 
       def kamal_config_argv
         [
-          "kamal",
+          *kamal_command,
           "config",
           *kamal_option_argv,
           "--version",
@@ -169,7 +170,7 @@ module KamalBackup
 
       def kamal_exec_argv(accessory_name, command)
         [
-          "kamal",
+          *kamal_command,
           "accessory",
           "exec",
           accessory_name,
@@ -180,11 +181,21 @@ module KamalBackup
 
       def kamal_secrets_print_argv
         [
-          "kamal",
+          *kamal_command,
           "secrets",
           "print",
           *kamal_option_argv
         ]
+      end
+
+      def kamal_command
+        if File.executable?(File.join(@cwd, "bin", "kamal"))
+          [ "bin/kamal" ]
+        elsif File.file?(File.join(@cwd, "Gemfile"))
+          [ "bundle", "exec", "kamal" ]
+        else
+          [ "kamal" ]
+        end
       end
 
       def kamal_option_argv
