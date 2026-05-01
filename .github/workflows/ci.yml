@@ -11,17 +11,7 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-      - run: bin/test
-
-  image:
+  build-image:
     runs-on: ubuntu-latest
     needs: test
     steps:
