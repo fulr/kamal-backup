@@ -71,6 +71,8 @@ accessories:
       - "chatwithwork_backup_state:/var/lib/kamal-backup"
 ```
 
+For SQLite databases stored on the mounted storage volume, omit `:ro` from that volume.
+
 Put the backup settings in `config/kamal-backup.yml`:
 
 ```yaml

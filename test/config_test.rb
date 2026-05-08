@@ -247,6 +247,16 @@ class ConfigTest < Minitest::Test
     assert_match(/production-looking/, error.message)
   end
 
+  def test_production_restore_env_does_not_bypass_production_like_targets
+    config = KamalBackup::Config.new(env: base_env("KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE" => "true"))
+
+    error = assert_raises(KamalBackup::ConfigurationError) do
+      config.validate_database_restore_target("postgres://app@db/app_production")
+    end
+
+    assert_match(/production-looking/, error.message)
+  end
+
   def test_local_machine_restore_does_not_require_a_restore_flag
     Dir.mktmpdir do |dir|
       config = KamalBackup::Config.new(env: base_env("BACKUP_PATHS" => dir))

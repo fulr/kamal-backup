@@ -86,6 +86,8 @@ accessories:
 
 Kamal uploads `config/kamal-backup.yml` and mounts it read-only into the accessory. Secrets still stay in Kamal secrets.
 
+If your SQLite database lives on the mounted storage volume, omit `:ro` from that volume so SQLite can back up the live WAL database normally.
+
 ## 4. Boot the accessory
 
 ```sh

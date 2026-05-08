@@ -63,7 +63,7 @@ state_dir: tmp/kamal-backup
 
 If the production Active Storage paths differ from your local Active Storage paths and you are not using `-d` or `-c`, set `LOCAL_RESTORE_SOURCE_PATHS` yourself.
 
-`restore local` refuses to run when `RAILS_ENV`, `RACK_ENV`, `APP_ENV`, or `KAMAL_ENVIRONMENT` is set to `production` unless you explicitly override that guard.
+`restore local` refuses to run when `RAILS_ENV`, `RACK_ENV`, `APP_ENV`, or `KAMAL_ENVIRONMENT` is set to `production`.
 
 ## `restore production`
 
@@ -78,7 +78,7 @@ bundle exec kamal-backup -d production restore production latest
 That command prompts locally, then shells out through Kamal to the backup accessory and runs:
 
 ```sh
-kamal-backup restore production latest --yes
+kamal-backup restore production latest --confirm-production-restore
 ```
 
 If you are already inside the accessory container, you can run the command directly there too.
@@ -91,13 +91,15 @@ This path uses:
 
 This is intentionally not a quiet operation. `restore production` is for real incident recovery.
 
+`restore production` does not accept `--yes` as a confirmation shortcut. Interactive use asks you to type the app name and `RESTORE PRODUCTION`. Automation must pass the explicit `--confirm-production-restore` flag.
+
 ## Prompts and Safety
 
 The safety model is:
 
 - you must choose `local` or `production`
 - destructive restores prompt for confirmation
-- automation must pass `--yes`
-- local restores refuse production-looking local targets unless you explicitly override them
+- `restore production` requires typed confirmation, or the explicit `--confirm-production-restore` automation flag
+- local restores refuse production-looking local targets
 
 That keeps the interface close to Kamal itself: explicit command, explicit target, deliberate confirmation.

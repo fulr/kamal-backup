@@ -42,7 +42,6 @@ module KamalBackup
       "backup_schedule_seconds" => "BACKUP_SCHEDULE_SECONDS",
       "backup_start_delay_seconds" => "BACKUP_START_DELAY_SECONDS",
       "state_dir" => "KAMAL_BACKUP_STATE_DIR",
-      "allow_production_restore" => "KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE",
       "allow_suspicious_paths" => "KAMAL_BACKUP_ALLOW_SUSPICIOUS_PATHS",
       "pgpassword" => "PGPASSWORD",
       "mysql_pwd" => "MYSQL_PWD"
@@ -102,10 +101,6 @@ module KamalBackup
 
     def check_read_data_subset
       value("RESTIC_CHECK_READ_DATA_SUBSET")
-    end
-
-    def allow_production_restore?
-      truthy?("KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE")
     end
 
     def allow_in_place_file_restore?
@@ -245,8 +240,8 @@ module KamalBackup
     def validate_local_database_restore_target(target)
       raise ConfigurationError, "local restore database target is required" if target.to_s.strip.empty?
 
-      if production_named_target?(target) && !allow_production_restore?
-        raise ConfigurationError, "refusing production-looking local restore target #{target}; set KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true to override"
+      if production_named_target?(target)
+        raise ConfigurationError, "refusing production-looking local restore target #{target}; use restore production for production restores"
       end
     end
 
@@ -266,8 +261,8 @@ module KamalBackup
     def validate_database_restore_target(target)
       raise ConfigurationError, "restore database target is required" if target.to_s.strip.empty?
 
-      if production_like_target?(target) && !allow_production_restore?
-        raise ConfigurationError, "refusing production-looking restore target #{target}; set KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true to override"
+      if production_like_target?(target)
+        raise ConfigurationError, "refusing production-looking restore target #{target}; choose a scratch target that does not look like production"
       end
     end
 
@@ -384,8 +379,8 @@ module KamalBackup
         if environment = local_restore_environment
           key, value = environment
 
-          if production_environment?(value) && !allow_production_restore?
-            raise ConfigurationError, "restore local refuses to run with #{key}=#{value}; set KAMAL_BACKUP_ALLOW_PRODUCTION_RESTORE=true to override"
+          if production_environment?(value)
+            raise ConfigurationError, "restore local refuses to run with #{key}=#{value}; unset #{key} or use restore production"
           end
         end
       end

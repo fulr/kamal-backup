@@ -94,6 +94,40 @@ class CLITest < Minitest::Test
     assert_includes out, "\"mode\": \"local\""
   end
 
+  def test_restore_production_requires_specific_confirmation_flag_for_noninteractive_use
+    fake = Object.new
+    def fake.restore_to_production(*)
+      raise "should not run"
+    end
+
+    _, err = capture_io do
+      error = assert_raises(SystemExit) do
+        with_fake_app(fake) do
+          KamalBackup::CLI.start(["restore", "production", "latest", "--yes"], env: base_env)
+        end
+      end
+      assert_equal 1, error.status
+    end
+
+    assert_includes err, "--yes does not bypass restore production"
+  end
+
+  def test_restore_production_with_explicit_confirmation_prints_json_output
+    fake = Object.new
+    def fake.restore_to_production(*)
+      { status: "ok", mode: "production" }
+    end
+
+    out, _ = capture_io do
+      with_fake_app(fake) do
+        KamalBackup::CLI.start(["restore", "production", "latest", "--confirm-production-restore"], env: base_env)
+      end
+    end
+
+    assert_includes out, "\"status\": \"ok\""
+    assert_includes out, "\"mode\": \"production\""
+  end
+
   def test_drill_local_prints_json_output
     fake = Object.new
     def fake.drill_on_local_machine(*, **)
@@ -181,6 +215,33 @@ class CLITest < Minitest::Test
     end
 
     assert_includes err, "confirmation required"
+  end
+
+  def test_restore_production_with_destination_passes_specific_confirmation_flag
+    fake_bridge = Object.new
+    calls = []
+
+    fake_bridge.define_singleton_method(:accessory_name) { |preferred:| "backup" }
+    fake_bridge.define_singleton_method(:remote_version) do |accessory_name:|
+      calls << { accessory_name: accessory_name, command: "kamal-backup version" }
+      KamalBackup::VERSION
+    end
+    fake_bridge.define_singleton_method(:execute_on_accessory) do |accessory_name:, command:|
+      calls << { accessory_name: accessory_name, command: command }
+      KamalBackup::CommandResult.new(stdout: "remote restore\n", stderr: "", status: 0)
+    end
+
+    out, _ = capture_io do
+      with_fake_bridge(fake_bridge) do
+        KamalBackup::CLI.start(["-d", "production", "restore", "production", "latest", "--confirm-production-restore"], env: {})
+      end
+    end
+
+    assert_equal [
+      { accessory_name: "backup", command: "kamal-backup version" },
+      { accessory_name: "backup", command: "kamal-backup restore production latest --confirm-production-restore" }
+    ], calls
+    assert_equal "remote restore\n", out
   end
 
   def test_init_creates_local_config_stubs
