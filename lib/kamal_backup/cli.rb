@@ -147,6 +147,43 @@ module KamalBackup
         end
       end
 
+      def confirm_production_restore!(snapshot)
+        return if options[:"confirm-production-restore"]
+
+        if options[:yes]
+          raise ConfigurationError, "--yes does not bypass restore production; use --confirm-production-restore only for deliberate automation"
+        end
+
+        unless $stdin.tty?
+          raise ConfigurationError, "production restore confirmation required; rerun interactively or pass --confirm-production-restore only for deliberate automation"
+        end
+
+        app_name = production_restore_confirmation_config.required_app_name
+        say "This will overwrite the production database and file paths for #{app_name} from backup #{snapshot}.", :red
+        require_typed_confirmation("Type the app name to continue", app_name)
+        require_typed_confirmation("Type RESTORE PRODUCTION to continue", "RESTORE PRODUCTION")
+        confirm!("Restore #{snapshot} into production now? This will overwrite production data.")
+      end
+
+      def require_typed_confirmation(prompt, expected)
+        answer = ask("#{prompt}:").to_s.strip
+        return if answer == expected
+
+        raise ConfigurationError, "aborted"
+      end
+
+      def production_restore_confirmation_config
+        if deployment_mode?
+          Config.new(
+            env: bridge.accessory_environment(accessory_name: accessory_name),
+            config_paths: [Config::SHARED_CONFIG_PATH],
+            load_project_defaults: false
+          )
+        else
+          direct_app.config
+        end
+      end
+
       def prompt_required(label)
         unless $stdin.tty?
           raise ConfigurationError, "#{label.downcase} is required; pass it on the command line"
@@ -234,12 +271,13 @@ module KamalBackup
         puts(JSON.pretty_generate(local_app.restore_to_local_machine(snapshot)))
       end
 
+      method_option :"confirm-production-restore", type: :boolean, default: false, desc: "Confirm production restore without interactive prompts"
       desc "production [SNAPSHOT]", "Restore the backup into the production database and Active Storage path"
       def production(snapshot = "latest")
-        confirm!("Restore #{snapshot} into the production database and Active Storage path? This will overwrite production data.")
+        confirm_production_restore!(snapshot)
 
         if deployment_mode?
-          exec_remote(["kamal-backup", "restore", "production", snapshot, "--yes"])
+          exec_remote(["kamal-backup", "restore", "production", snapshot, "--confirm-production-restore"])
         else
           puts(JSON.pretty_generate(direct_app.restore_to_production(snapshot)))
         end

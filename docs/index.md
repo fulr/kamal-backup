@@ -1,6 +1,6 @@
 ---
 layout: home
-title: Home
+title: kamal-backup Documentation
 description: "The easiest scheduled backup setup for Rails apps deployed with Kamal: databases, file-backed Active Storage, restore drills, and security review evidence."
 permalink: /
 hero:

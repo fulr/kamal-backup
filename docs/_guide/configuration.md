@@ -54,9 +54,22 @@ For SQLite, point at the database file inside the accessory:
 
 ```yaml
 database_adapter: sqlite
-sqlite_database_path: /data/db/production.sqlite3
+sqlite_database_path: /data/storage/production.sqlite3
 ```
 {: data-title="config/kamal-backup.yml"}
+
+That path should be the live SQLite database file as mounted into the backup accessory. The SQLite adapter creates its own temporary backup file before sending it to restic.
+
+For a live SQLite database in WAL mode, mount the storage volume read-write in the backup accessory so SQLite can open the database, WAL, and shared-memory files normally:
+
+```yaml
+volumes:
+  - "your_app_storage:/data/storage"
+  - "your_app_backup_state:/var/lib/kamal-backup"
+```
+{: data-title="config/deploy.yml"}
+
+If you require the backup accessory to have no write access to app storage, do not point it at a live WAL database over a read-only mount. Have the writer create a WAL-less snapshot, then point `sqlite_database_path` at that snapshot. That is an advanced hardening tradeoff, not the normal SQLite setup.
 
 ## Add The Accessory
 
@@ -155,5 +168,7 @@ restic_keep_yearly: 2
 backup_start_delay_seconds: 0
 ```
 {: data-title="config/kamal-backup.yml"}
+
+`restic_forget_after_backup` defaults to enabled unless explicitly set to a falsey value such as `false`, `0`, `no`, `n`, or `off`.
 
 Environment variables can still override YAML values when you need an emergency override, but the clean setup is YAML for configuration and Kamal secrets for secrets.
